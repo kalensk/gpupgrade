@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/greenplum-db/gpupgrade/db"
 	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	pb "github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
@@ -42,8 +41,7 @@ func SaveTargetClusterConfig(target *utils.Cluster, dbConnector *dbconn.DBConn, 
 
 func (h *Hub) PrepareInitCluster(ctx context.Context, in *pb.PrepareInitClusterRequest) (*pb.PrepareInitClusterReply, error) {
 	gplog.Info("Running PrepareInitCluster()")
-	dbConnector := db.NewDBConn("localhost", int(h.source.MasterPort()),
-		"template1")
+	dbConnector := h.source.NewDBConn()
 
 	go func() {
 		step := h.checklist.GetStepWriter(upgradestatus.INIT_CLUSTER)

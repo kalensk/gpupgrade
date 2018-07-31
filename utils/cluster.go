@@ -5,6 +5,9 @@ import (
 	"fmt"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
+	"github.com/greenplum-db/gp-common-go-libs/dbconn"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
+	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"github.com/pkg/errors"
 )
 
@@ -58,6 +61,10 @@ func (c *Cluster) Commit() error {
 
 func (c *Cluster) MasterDataDir() string {
 	return c.GetDirForContent(-1)
+}
+
+func (c *Cluster) MasterHost() string {
+	return c.GetHostForContent(-1)
 }
 
 func (c *Cluster) MasterPort() int {
@@ -120,4 +127,31 @@ func (c *Cluster) ExecuteOnAllHosts(desc string, cmd func(contentID int) string)
 
 	remoteOutput := c.GenerateAndExecuteCommand(desc, cmd, cluster.ON_HOSTS_AND_MASTER)
 	return remoteOutput, nil
+}
+
+func (c *Cluster) NewDBConn() *dbconn.DBConn {
+	defaultUser := "gpadmin"
+
+	username := operating.System.Getenv("PGUSER")
+	if username == "" {
+		currentUser, err := operating.System.CurrentUser()
+		if err != nil {
+			gplog.Verbose("Error retrieving current os user, defaulting to %s", defaultUser)
+			username = defaultUser
+		} else {
+			username = currentUser.Username
+		}
+	}
+
+	return &dbconn.DBConn{
+		ConnPool: nil,
+		NumConns: 0,
+		Driver:   dbconn.GPDBDriver{},
+		User:     username,
+		DBName:   "postgres",
+		Host:     c.MasterHost(),
+		Port:     c.MasterPort(),
+		Tx:       nil,
+		Version:  dbconn.GPDBVersion{},
+	}
 }

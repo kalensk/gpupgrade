@@ -1,9 +1,11 @@
 package services
 
 import (
+	"os"
+	"strconv"
+
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
-	"github.com/greenplum-db/gpupgrade/db"
 	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	pb "github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
@@ -44,8 +46,23 @@ func (h *Hub) CheckConfig(ctx context.Context, _ *pb.CheckConfigRequest) (*pb.Ch
 // querying the database located at its host and port. The results will
 // additionally be written to disk.
 func RetrieveAndSaveSourceConfig(source *utils.Cluster) error {
-	dbConnector := db.NewDBConn("localhost", 0, "template1")
-	err := dbConnector.Connect(1)
+	port, err := strconv.Atoi(os.Getenv("PGPORT"))
+	if err != nil {
+		port = 5432 // follow postgres convention for default port
+	}
+
+	master := cluster.SegConfig{
+		DbID:      1,
+		ContentID: -1,
+		Port:      port,
+		Hostname:  "localhost",
+	}
+
+	cc := cluster.Cluster{Segments: map[int]cluster.SegConfig{-1: master}}
+	sourceSeed := &utils.Cluster{Cluster: &cc}
+
+	dbConnector := sourceSeed.NewDBConn()
+	err = dbConnector.Connect(1)
 	if err != nil {
 		return utils.DatabaseConnectionError{Parent: err}
 	}
