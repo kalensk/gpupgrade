@@ -8,6 +8,7 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
+	"github.com/greenplum-db/gpupgrade/hub/services"
 	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	"github.com/greenplum-db/gpupgrade/utils"
 	. "github.com/onsi/ginkgo"
@@ -23,7 +24,7 @@ var _ = Describe("prepare", func() {
 	AfterEach(func() {
 		os.Remove(fmt.Sprintf("%s_upgrade", testWorkspaceDir))
 	})
-	It("can save the database configuration json under the name 'new cluster'", func() {
+	It("can save the newly minted database configuration json to disk", func() {
 		mockdb, mock := testhelper.CreateMockDB()
 		testDriver := testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
 		db := dbconn.NewDBConn(testDriver.DBName, testDriver.User, "fakehost", -1 /* not used */)
@@ -36,16 +37,29 @@ var _ = Describe("prepare", func() {
 		mock.ExpectQuery("SELECT .*server.*").WillReturnRows(encodingRow)
 		mock.ExpectQuery("SELECT (.*)").WillReturnRows(getFakeConfigRows())
 
-		err := hub.InitCluster(db)
+		seedCluster, err := hub.InitCluster(db)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(cm.WasReset(upgradestatus.INIT_CLUSTER)).To(BeTrue())
 		Expect(cm.IsInProgress(upgradestatus.INIT_CLUSTER)).To(BeTrue())
+
+		mockdb, mock = testhelper.CreateMockDB()
+		testDriver = testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
+		db = dbconn.NewDBConn(testDriver.DBName, testDriver.User, "fakehost", -1 /* not used */)
+		db.Driver = testDriver
+
+		mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow())
+		checkpointRow = sqlmock.NewRows([]string{"string"}).AddRow(driver.Value("8"))
+		encodingRow = sqlmock.NewRows([]string{"string"}).AddRow(driver.Value("UNICODE"))
+		mock.ExpectQuery("SELECT (.*)").WillReturnRows(getFakeConfigRows())
+
+		err = services.SaveTargetClusterConfig(seedCluster, db, testStateDir)
+		Expect(err).ToNot(HaveOccurred())
 
 		target := &utils.Cluster{ConfigPath: filepath.Join(testStateDir, utils.TARGET_CONFIG_FILENAME)}
 		err = target.Load()
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(len(target.Segments)).To(BeNumerically(">", 1))
+		Expect(len(target.Segments)).To(BeNumerically(">", 1), "number of segements")
 	})
 })
 

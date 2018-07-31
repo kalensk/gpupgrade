@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 
 	"github.com/greenplum-db/gpupgrade/hub/services"
@@ -15,6 +16,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
+	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -174,11 +176,30 @@ var _ = Describe("Hub prepare init-cluster", func() {
 			Expect(err.Error()).To(Equal("gpinitsystem failed: some output: exit status 127"))
 		})
 	})
+
 	Describe("SaveTargetClusterConfig", func() {
+		var (
+			dbConnector *dbconn.DBConn
+			mockdb      *sqlx.DB
+			mock        sqlmock.Sqlmock
+		)
+
+		BeforeEach(func() {
+			mockdb, mock = testhelper.CreateMockDB()
+			testDriver := testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
+			dbConnector = dbconn.NewDBConn(testDriver.DBName, testDriver.User, "fakehost", -1 /* not used */)
+			dbConnector.Driver = testDriver
+		})
+
+		getFakeVersionRow := func(v string) *sqlmock.Rows {
+			return sqlmock.NewRows([]string{"versionstring"}).
+				AddRow([]driver.Value{"PostgreSQL 8.4 (Greenplum Database " + v + ")"}...)
+		}
+
+		// TODO: Assert in each test that dbConnection is closed
 
 		It("successfully stores target cluster config for GPDB 6", func() {
-			testhelper.SetDBVersion(dbConnector, "6.0.0")
-
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("6.0.0"))
 			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
 
 			fakeConfigFile := gbytes.NewBuffer()
@@ -195,6 +216,7 @@ var _ = Describe("Hub prepare init-cluster", func() {
 		})
 
 		It("successfully stores target cluster config for GPDB 4 and 5", func() {
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
 			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
 
 			fakeConfigFile := gbytes.NewBuffer()
@@ -216,11 +238,13 @@ var _ = Describe("Hub prepare init-cluster", func() {
 				return errors.New("failed to write config file")
 			}
 
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
 			err := services.SaveTargetClusterConfig(target, dbConnector, dir)
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("db.Select query for cluster config fails", func() {
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
 			mock.ExpectQuery("SELECT .*").WillReturnError(errors.New("fail config query"))
 
 			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
