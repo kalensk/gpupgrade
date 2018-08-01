@@ -34,28 +34,39 @@ func (h *Hub) AsyncInit() {
 
 	var err error
 
-	dbConnector := h.source.NewDBConn()
+	// XXX: Should we be resetting and marking inprogress?
 	step := h.checklist.GetStepWriter(upgradestatus.INIT_CLUSTER)
+
+	// Current implementation of InitCluster blows away BinDir passed in from CLI
+	//  save off and set below
 	targetBinDir := h.target.BinDir
-	h.target, err = h.InitCluster(dbConnector)
+
+	dbConnector := h.source.NewDBConn()
+	updatedTarget, err := h.InitCluster(dbConnector)
 	if err != nil {
 		gplog.Error("%v", errors.Wrap(err, "Could not initialize new cluster"))
 		step.MarkFailed()
 		return
 	}
+
+	h.target = updatedTarget
 	h.target.BinDir = targetBinDir
+
 	dbConnector = h.target.NewDBConn()
-	gplog.Info("Connection version is %+v", dbConnector.Version)
 	err = SaveTargetClusterConfig(h.target, dbConnector, h.conf.StateDir)
 	if err != nil {
 		gplog.Error("%v", errors.Wrap(err, "Could not save new cluster configuration"))
+		gplog.Info("Connection version is %+v", dbConnector.Version)
 		step.MarkFailed()
 	}
+
 	step.MarkComplete()
 }
 
 func (h *Hub) InitCluster(dbConnector *dbconn.DBConn) (*utils.Cluster, error) {
+	// XXX: Should we be resetting and marking inprogress?
 	step := h.checklist.GetStepWriter(upgradestatus.INIT_CLUSTER)
+
 	segmentDataDirMap := map[string][]string{}
 	agentConns := []*Connection{}
 	gpinitsystemFilepath := filepath.Join(h.conf.StateDir, "gpinitsystem_config")

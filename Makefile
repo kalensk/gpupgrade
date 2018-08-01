@@ -103,6 +103,13 @@ install: cli-package hub-package install_agent
 		cp -p $(CLI) $(GPHOME)/bin/$(CLI)
 		cp -p $(HUB) $(GPHOME)/bin/$(HUB)
 
+install-check: install
+		@echo "---------------------------------------"
+		@echo "# FIXME: Running cmd directly from make hangs after test completes."
+		@echo "#   Variation on https://github.com/sstephenson/bats/issues/80#issuecomment-174101686 ?"
+		@echo ""
+		@echo "Please Run: ./install-check.bats -t"
+
 clean:
 		# Build artifacts
 		rm -f $(AGENT)
