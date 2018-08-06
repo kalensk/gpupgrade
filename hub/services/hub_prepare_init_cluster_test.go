@@ -3,10 +3,8 @@ package services_test
 import (
 	"database/sql/driver"
 	"fmt"
-	"io/ioutil"
 	"os"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 
 	"github.com/greenplum-db/gpupgrade/hub/services"
@@ -16,7 +14,6 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
-	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -27,8 +24,6 @@ import (
 
 var _ = Describe("Hub prepare init-cluster", func() {
 	var (
-		queryResult = `{"SegConfigs":[{"DbID":1,"ContentID":-1,"Port":15432,"Hostname":"mdw","DataDir":"/data/master/gpseg-1"},` +
-			`{"DbID":2,"ContentID":0,"Port":25432,"Hostname":"sdw1","DataDir":"/data/primary/gpseg0"}],"BinDir":"/target/bindir"}`
 		expectedCluster *utils.Cluster
 		segDataDirMap   map[string][]string
 	)
@@ -177,85 +172,6 @@ var _ = Describe("Hub prepare init-cluster", func() {
 		})
 	})
 
-	Describe("SaveTargetClusterConfig", func() {
-		var (
-			dbConnector *dbconn.DBConn
-			mockdb      *sqlx.DB
-			mock        sqlmock.Sqlmock
-		)
-
-		BeforeEach(func() {
-			mockdb, mock = testhelper.CreateMockDB()
-			testDriver := testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
-			dbConnector = dbconn.NewDBConn(testDriver.DBName, testDriver.User, "fakehost", -1 /* not used */)
-			dbConnector.Driver = testDriver
-		})
-
-		getFakeVersionRow := func(v string) *sqlmock.Rows {
-			return sqlmock.NewRows([]string{"versionstring"}).
-				AddRow([]driver.Value{"PostgreSQL 8.4 (Greenplum Database " + v + ")"}...)
-		}
-
-		// TODO: Assert in each test that dbConnection is closed
-
-		It("successfully stores target cluster config for GPDB 6", func() {
-			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("6.0.0"))
-			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
-
-			fakeConfigFile := gbytes.NewBuffer()
-			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
-				fmt.Fprint(fakeConfigFile, string(data))
-				ioutil.WriteFile(filename, data, perm)
-				return nil
-			}
-
-			err := services.SaveTargetClusterConfig(target, dbConnector, dir)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(fakeConfigFile.Contents())).To(ContainSubstring(queryResult))
-			Expect(target.Cluster).To(Equal(expectedCluster.Cluster))
-		})
-
-		It("successfully stores target cluster config for GPDB 4 and 5", func() {
-			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
-			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
-
-			fakeConfigFile := gbytes.NewBuffer()
-			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
-				fmt.Fprint(fakeConfigFile, string(data))
-				ioutil.WriteFile(filename, data, perm)
-				return nil
-			}
-
-			err := services.SaveTargetClusterConfig(target, dbConnector, dir)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(string(fakeConfigFile.Contents())).To(ContainSubstring(queryResult))
-			Expect(target.Cluster).To(Equal(expectedCluster.Cluster))
-		})
-
-		It("fails to get config file handle", func() {
-			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
-				return errors.New("failed to write config file")
-			}
-
-			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
-			err := services.SaveTargetClusterConfig(target, dbConnector, dir)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("db.Select query for cluster config fails", func() {
-			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
-			mock.ExpectQuery("SELECT .*").WillReturnError(errors.New("fail config query"))
-
-			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
-				return nil
-			}
-
-			err := services.SaveTargetClusterConfig(target, dbConnector, dir)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError("Unable to get segment configuration for new cluster: fail config query"))
-		})
-	})
 	Describe("GetMasterSegPrefix", func() {
 		DescribeTable("returns a valid seg prefix given",
 			func(datadir string) {
@@ -282,13 +198,3 @@ var _ = Describe("Hub prepare init-cluster", func() {
 	})
 
 })
-
-// Construct sqlmock in-memory rows that are structured properly
-func getFakeConfigRows() *sqlmock.Rows {
-	header := []string{"dbid", "contentid", "port", "hostname", "datadir"}
-	fakeConfigRow := []driver.Value{1, -1, 15432, "mdw", "/data/master/gpseg-1"}
-	fakeConfigRow2 := []driver.Value{2, 0, 25432, "sdw1", "/data/primary/gpseg0"}
-	rows := sqlmock.NewRows(header)
-	heapfakeResult := rows.AddRow(fakeConfigRow...).AddRow(fakeConfigRow2...)
-	return heapfakeResult
-}

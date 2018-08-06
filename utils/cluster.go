@@ -155,3 +155,20 @@ func (c *Cluster) NewDBConn() *dbconn.DBConn {
 		Version:  dbconn.GPDBVersion{},
 	}
 }
+
+func (c *Cluster) ConnectAndRetrieveConfig(dbConnector *dbconn.DBConn) error {
+	err := dbConnector.Connect(1)
+	if err != nil {
+		return DatabaseConnectionError{Parent: err}
+	}
+	defer dbConnector.Close()
+
+	dbConnector.Version.Initialize(dbConnector)
+	segConfigs, err := cluster.GetSegmentConfiguration(dbConnector)
+	if err != nil {
+		return errors.Wrap(err, "Unable to get segment configuration for cluster")
+	}
+
+	c.Cluster = cluster.NewCluster(segConfigs)
+	return nil
+}

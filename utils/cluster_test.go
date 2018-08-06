@@ -1,6 +1,7 @@
 package utils_test
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,10 +9,13 @@ import (
 	"path"
 
 	"github.com/greenplum-db/gp-common-go-libs/cluster"
+	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/greenplum-db/gp-common-go-libs/operating"
 	"github.com/greenplum-db/gpupgrade/testutils"
 	"github.com/greenplum-db/gpupgrade/utils"
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
+	sqlmock "gopkg.in/DATA-DOG/go-sqlmock.v1"
 
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
@@ -184,5 +188,98 @@ var _ = Describe("Cluster", func() {
 			Expect(dbConnector.User).To(Equal("gpadmin"))
 		})
 		// FIXME: protect against badly initialized clusters
+	})
+	Describe("ConnectAndRetrieveConfig", func() {
+		var (
+			expectedCluster *utils.Cluster
+			resultCluster   *utils.Cluster
+			dbConnector     *dbconn.DBConn
+			mockdb          *sqlx.DB
+			mock            sqlmock.Sqlmock
+		)
+
+		BeforeEach(func() {
+			expectedCluster = &utils.Cluster{
+				Cluster: &cluster.Cluster{
+					ContentIDs: []int{-1, 0},
+					Segments: map[int]cluster.SegConfig{
+						-1: {DbID: 1, ContentID: -1, Port: 15432, Hostname: "mdw", DataDir: "/data/master/gpseg-1"},
+						0:  {DbID: 2, ContentID: 0, Port: 25432, Hostname: "sdw1", DataDir: "/data/primary/gpseg0"},
+					},
+					Executor: &cluster.GPDBExecutor{},
+				},
+			}
+			master := cluster.SegConfig{
+				DbID:      1,
+				ContentID: -1,
+				Port:      5432,
+				Hostname:  "mdw",
+			}
+
+			cc := cluster.Cluster{Segments: map[int]cluster.SegConfig{-1: master}}
+			resultCluster = &utils.Cluster{Cluster: &cc}
+
+			mockdb, mock = testhelper.CreateMockDB()
+			testDriver := testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
+			dbConnector = dbconn.NewDBConn(testDriver.DBName, testDriver.User, "fakehost", -1 /* not used */)
+			dbConnector.Driver = testDriver
+		})
+
+		getFakeVersionRow := func(v string) *sqlmock.Rows {
+			return sqlmock.NewRows([]string{"versionstring"}).
+				AddRow([]driver.Value{"PostgreSQL 8.4 (Greenplum Database " + v + ")"}...)
+		}
+
+		// Construct sqlmock in-memory rows that are structured properly
+		getFakeConfigRows := func() *sqlmock.Rows {
+			header := []string{"dbid", "contentid", "port", "hostname", "datadir"}
+			fakeConfigRow := []driver.Value{1, -1, 15432, "mdw", "/data/master/gpseg-1"}
+			fakeConfigRow2 := []driver.Value{2, 0, 25432, "sdw1", "/data/primary/gpseg0"}
+			rows := sqlmock.NewRows(header)
+			heapfakeResult := rows.AddRow(fakeConfigRow...).AddRow(fakeConfigRow2...)
+			return heapfakeResult
+		}
+
+		It("successfully stores target cluster config for GPDB 6", func() {
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("6.0.0"))
+			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
+
+			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(resultCluster).To(Equal(expectedCluster))
+		})
+
+		It("successfully stores target cluster config for GPDB 4 and 5", func() {
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
+			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
+
+			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(resultCluster).To(Equal(expectedCluster))
+		})
+
+		It("fails to get config file handle", func() {
+			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
+				return errors.New("failed to write config file")
+			}
+
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
+			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("db.Select query for cluster config fails", func() {
+			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
+			mock.ExpectQuery("SELECT .*").WillReturnError(errors.New("fail config query"))
+
+			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
+				return nil
+			}
+
+			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError("Unable to get segment configuration for cluster: fail config query"))
+		})
 	})
 })
