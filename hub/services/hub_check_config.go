@@ -29,7 +29,13 @@ func (h *Hub) CheckConfig(ctx context.Context, _ *pb.CheckConfigRequest) (*pb.Ch
 		gplog.Error("error from MarkInProgress " + err.Error())
 	}
 
-	err = RetrieveAndSaveSourceConfig(h.source)
+	port, err := strconv.Atoi(os.Getenv("PGPORT"))
+	if err != nil {
+		port = 5432 // follow postgres convention for default port
+	}
+
+	sourceSeed := utils.NewMasterOnlyCluster(port, "localhost", h.source.ConfigPath)
+	err = RetrieveAndSaveSourceConfig(sourceSeed)
 	if err != nil {
 		step.MarkFailed()
 		gplog.Error(err.Error())
@@ -46,23 +52,8 @@ func (h *Hub) CheckConfig(ctx context.Context, _ *pb.CheckConfigRequest) (*pb.Ch
 // querying the database located at its host and port. The results will
 // additionally be written to disk.
 func RetrieveAndSaveSourceConfig(source *utils.Cluster) error {
-	port, err := strconv.Atoi(os.Getenv("PGPORT"))
-	if err != nil {
-		port = 5432 // follow postgres convention for default port
-	}
-
-	master := cluster.SegConfig{
-		DbID:      1,
-		ContentID: -1,
-		Port:      port,
-		Hostname:  "localhost",
-	}
-
-	cc := cluster.Cluster{Segments: map[int]cluster.SegConfig{-1: master}}
-	sourceSeed := &utils.Cluster{Cluster: &cc}
-
-	dbConnector := sourceSeed.NewDBConn()
-	err = dbConnector.Connect(1)
+	dbConnector := source.NewDBConn()
+	err := dbConnector.Connect(1)
 	if err != nil {
 		return utils.DatabaseConnectionError{Parent: err}
 	}

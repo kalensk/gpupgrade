@@ -209,15 +209,7 @@ var _ = Describe("Cluster", func() {
 					Executor: &cluster.GPDBExecutor{},
 				},
 			}
-			master := cluster.SegConfig{
-				DbID:      1,
-				ContentID: -1,
-				Port:      5432,
-				Hostname:  "mdw",
-			}
-
-			cc := cluster.Cluster{Segments: map[int]cluster.SegConfig{-1: master}}
-			resultCluster = &utils.Cluster{Cluster: &cc}
+			resultCluster = utils.NewMasterOnlyCluster(5432, "mdw", "")
 
 			mockdb, mock = testhelper.CreateMockDB()
 			testDriver := testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
@@ -257,16 +249,6 @@ var _ = Describe("Cluster", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(resultCluster).To(Equal(expectedCluster))
-		})
-
-		It("fails to get config file handle", func() {
-			utils.System.WriteFile = func(filename string, data []byte, perm os.FileMode) error {
-				return errors.New("failed to write config file")
-			}
-
-			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
-			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
-			Expect(err).To(HaveOccurred())
 		})
 
 		It("db.Select query for cluster config fails", func() {

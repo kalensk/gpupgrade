@@ -108,18 +108,8 @@ func (h *Hub) InitCluster(dbConnector *dbconn.DBConn) (*utils.Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-	targetMaster := cluster.SegConfig{
-		// FIXME: If we do anything smarter with master port, we'll need to get it from h.DeclareDataDirectories
-		DbID:      1,
-		ContentID: -1,
-		Port:      h.source.MasterPort() + 1,
-		Hostname:  h.source.MasterHost(),
-	}
-	targetSeed := &utils.Cluster{
-		Cluster: &cluster.Cluster{
-			Segments: map[int]cluster.SegConfig{-1: targetMaster},
-		},
-	}
+	// FIXME: If we do anything smarter with master port, we'll need to get it from h.DeclareDataDirectories
+	targetSeed := utils.NewMasterOnlyCluster(h.source.MasterPort()+1, h.source.MasterHost(), h.target.ConfigPath)
 	return targetSeed, nil
 }
 

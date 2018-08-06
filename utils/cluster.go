@@ -22,6 +22,19 @@ type Cluster struct {
 	ConfigPath string
 }
 
+func NewMasterOnlyCluster(port int, host string, configPath string) *Cluster {
+	master := cluster.SegConfig{
+		DbID:      1,
+		ContentID: -1,
+		Port:      port,
+		Hostname:  host,
+	}
+
+	cc := cluster.Cluster{Segments: map[int]cluster.SegConfig{-1: master}}
+	c := &Cluster{Cluster: &cc, ConfigPath: configPath}
+	return c
+}
+
 /*
  * We need to use an intermediary struct for reading and writing fields not
  * present in cluster.Cluster
