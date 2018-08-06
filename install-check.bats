@@ -56,12 +56,14 @@ setup() {
 clean_target_cluster() {
     ps -ef | grep postgres | grep _upgrade | awk '{print "/tmp/.s.PGSQL."$12".lock"}' | xargs -0 -I {} rm -f {}
     ps -ef | grep postgres | grep _upgrade | awk '{print "/tmp/.s.PGSQL."$12}' | xargs -0 -I {} rm -f {}
-    # Apparently we can't be clever enough ^^ so dumb works vv (assumes demo cluster)
-    rm -f /tmp/.s.PGSQL.15433.lock
-    ps -ef | grep postgres | grep _upgrade | awk '{print $2}' | xargs kill -9
+
+    # Apparently we can't be clever enough ^-- so dumb works --v
+    TARGET_MASTER_PORT=$((PGPORT+1))
+    rm -f /tmp/.s.PGSQL."$TARGET_MASTER_PORT".lock
+
+    ps -ef | grep postgres | grep _upgrade | awk '{print $2}' | xargs kill -9 || true
+
     rm -rf "$MASTER_DATA_DIRECTORY"/../../*_upgrade
-    # TODO: Can we be less sketchy ^^
-    # gpdeletesystem -d "$MASTER_DATA_DIRECTORY"/../../*_upgrade #FORCE?
 }
 
 clean_statedir() {
