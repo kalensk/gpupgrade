@@ -8,7 +8,6 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/greenplum-db/gpupgrade/hub/services"
 	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	"github.com/greenplum-db/gpupgrade/utils"
 	. "github.com/onsi/ginkgo"
@@ -18,8 +17,15 @@ import (
 
 // the `prepare start-hub` tests are currently in master_only_integration_test
 var _ = Describe("prepare", func() {
+	var (
+		targetPath string
+	)
 	BeforeEach(func() {
+		step := cm.GetStepWriter(upgradestatus.INIT_CLUSTER)
+		step.ResetStateDir()
+		step.MarkInProgress()
 		go agent.Start()
+		targetPath = filepath.Join(testStateDir, utils.TARGET_CONFIG_FILENAME)
 	})
 	AfterEach(func() {
 		os.Remove(fmt.Sprintf("%s_upgrade", testWorkspaceDir))
@@ -41,6 +47,7 @@ var _ = Describe("prepare", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(cm.WasReset(upgradestatus.INIT_CLUSTER)).To(BeTrue())
 		Expect(cm.IsInProgress(upgradestatus.INIT_CLUSTER)).To(BeTrue())
+		seedCluster.ConfigPath = targetPath
 
 		mockdb, mock = testhelper.CreateMockDB()
 		testDriver = testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
@@ -52,10 +59,12 @@ var _ = Describe("prepare", func() {
 		encodingRow = sqlmock.NewRows([]string{"string"}).AddRow(driver.Value("UNICODE"))
 		mock.ExpectQuery("SELECT (.*)").WillReturnRows(getFakeConfigRows())
 
-		err = services.SaveTargetClusterConfig(seedCluster, db, testStateDir)
+		err = seedCluster.RefreshConfig(db)
+		Expect(err).ToNot(HaveOccurred())
+		err = seedCluster.Commit()
 		Expect(err).ToNot(HaveOccurred())
 
-		target := &utils.Cluster{ConfigPath: filepath.Join(testStateDir, utils.TARGET_CONFIG_FILENAME)}
+		target := &utils.Cluster{ConfigPath: targetPath}
 		err = target.Load()
 		Expect(err).ToNot(HaveOccurred())
 

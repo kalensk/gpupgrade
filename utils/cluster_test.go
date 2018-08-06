@@ -43,6 +43,7 @@ var _ = Describe("Cluster", func() {
 
 	AfterEach(func() {
 		os.RemoveAll(testStateDir)
+		utils.System = utils.InitializeSystemFunctions()
 	})
 
 	Describe("Commit and Load", func() {
@@ -189,7 +190,7 @@ var _ = Describe("Cluster", func() {
 		})
 		// FIXME: protect against badly initialized clusters
 	})
-	Describe("ConnectAndRetrieveConfig", func() {
+	Describe("RefreshConfig", func() {
 		var (
 			expectedCluster *utils.Cluster
 			resultCluster   *utils.Cluster
@@ -209,7 +210,7 @@ var _ = Describe("Cluster", func() {
 					Executor: &cluster.GPDBExecutor{},
 				},
 			}
-			resultCluster = utils.NewMasterOnlyCluster(5432, "mdw", "")
+			resultCluster = utils.NewMasterOnlyCluster(5432, "mdw", "", "")
 
 			mockdb, mock = testhelper.CreateMockDB()
 			testDriver := testhelper.TestDriver{DB: mockdb, DBName: "testdb", User: "testrole"}
@@ -236,7 +237,7 @@ var _ = Describe("Cluster", func() {
 			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("6.0.0"))
 			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
 
-			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			err := resultCluster.RefreshConfig(dbConnector)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resultCluster).To(Equal(expectedCluster))
 		})
@@ -245,7 +246,7 @@ var _ = Describe("Cluster", func() {
 			mock.ExpectQuery("SELECT version()").WillReturnRows(getFakeVersionRow("5.10.1"))
 			mock.ExpectQuery("SELECT .*").WillReturnRows(getFakeConfigRows())
 
-			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			err := resultCluster.RefreshConfig(dbConnector)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(resultCluster).To(Equal(expectedCluster))
@@ -259,7 +260,7 @@ var _ = Describe("Cluster", func() {
 				return nil
 			}
 
-			err := resultCluster.ConnectAndRetrieveConfig(dbConnector)
+			err := resultCluster.RefreshConfig(dbConnector)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError("Unable to get segment configuration for cluster: fail config query"))
 		})

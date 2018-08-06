@@ -13,7 +13,6 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/greenplum-db/gp-common-go-libs/cluster"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -24,23 +23,10 @@ import (
 
 var _ = Describe("Hub prepare init-cluster", func() {
 	var (
-		expectedCluster *utils.Cluster
-		segDataDirMap   map[string][]string
+		segDataDirMap map[string][]string
 	)
 
 	BeforeEach(func() {
-		expectedCluster = &utils.Cluster{
-			Cluster: &cluster.Cluster{
-				ContentIDs: []int{-1, 0},
-				Segments: map[int]cluster.SegConfig{
-					-1: {DbID: 1, ContentID: -1, Port: 15432, Hostname: "mdw", DataDir: "/data/master/gpseg-1"},
-					0:  {DbID: 2, ContentID: 0, Port: 25432, Hostname: "sdw1", DataDir: "/data/primary/gpseg0"},
-				},
-				Executor: &cluster.GPDBExecutor{},
-			},
-			BinDir: "/tmp",
-		}
-
 		segDataDirMap = map[string][]string{
 			"host1": {fmt.Sprintf("%s_upgrade", dir)},
 			"host2": {fmt.Sprintf("%s_upgrade", dir)},

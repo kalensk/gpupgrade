@@ -14,7 +14,6 @@ import (
 	"github.com/greenplum-db/gpupgrade/utils"
 	"github.com/greenplum-db/gpupgrade/utils/log"
 
-	"github.com/greenplum-db/gp-common-go-libs/cluster"
 	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/pkg/errors"
@@ -34,49 +33,42 @@ func (h *Hub) AsyncInit() {
 
 	var err error
 
-	// XXX: Should we be resetting and marking inprogress?
 	step := h.checklist.GetStepWriter(upgradestatus.INIT_CLUSTER)
-
-	// Current implementation of InitCluster blows away BinDir passed in from CLI
-	//  save off and set below
-	targetBinDir := h.target.BinDir
+	// This should never fail, so it panics if it does
+	initializeState(step)
 
 	dbConnector := h.source.NewDBConn()
-	updatedTarget, err := h.InitCluster(dbConnector)
+	h.target, err = h.InitCluster(dbConnector)
 	if err != nil {
-		gplog.Error("%v", errors.Wrap(err, "Could not initialize new cluster"))
+		gplog.Error("Could not initialize target cluster: %v", err)
 		step.MarkFailed()
 		return
 	}
 
-	h.target = updatedTarget
-	h.target.BinDir = targetBinDir
-
 	dbConnector = h.target.NewDBConn()
-	err = SaveTargetClusterConfig(h.target, dbConnector, h.conf.StateDir)
+	err = h.target.RefreshConfig(dbConnector)
 	if err != nil {
-		gplog.Error("%v", errors.Wrap(err, "Could not save new cluster configuration"))
-		gplog.Info("Connection version is %+v", dbConnector.Version)
+		gplog.Error("Could not retrieve target cluster configuration: %v", err)
 		step.MarkFailed()
+		return
+	}
+
+	err = h.target.Commit()
+	if err != nil {
+		gplog.Error("Could not save target cluster configuration: %v", err)
+		step.MarkFailed()
+		return
 	}
 
 	step.MarkComplete()
 }
 
 func (h *Hub) InitCluster(dbConnector *dbconn.DBConn) (*utils.Cluster, error) {
-	// XXX: Should we be resetting and marking inprogress?
-	step := h.checklist.GetStepWriter(upgradestatus.INIT_CLUSTER)
-
 	segmentDataDirMap := map[string][]string{}
 	agentConns := []*Connection{}
 	gpinitsystemFilepath := filepath.Join(h.conf.StateDir, "gpinitsystem_config")
 
-	err := initializeState(step)
-	if err != nil {
-		return nil, err
-	}
-
-	err = dbConnector.Connect(1)
+	err := dbConnector.Connect(1)
 	if err != nil {
 		return nil, errors.Wrap(err, "Could not connect to database")
 	}
@@ -109,50 +101,8 @@ func (h *Hub) InitCluster(dbConnector *dbconn.DBConn) (*utils.Cluster, error) {
 		return nil, err
 	}
 	// FIXME: If we do anything smarter with master port, we'll need to get it from h.DeclareDataDirectories
-	targetSeed := utils.NewMasterOnlyCluster(h.source.MasterPort()+1, h.source.MasterHost(), h.target.ConfigPath)
+	targetSeed := utils.NewMasterOnlyCluster(h.source.MasterPort()+1, h.source.MasterHost(), h.target.BinDir, h.target.ConfigPath)
 	return targetSeed, nil
-}
-
-func initializeState(step upgradestatus.StateWriter) error {
-	err := step.ResetStateDir()
-	if err != nil {
-		return errors.Wrap(err, "Could not reset state dir")
-	}
-
-	err = step.MarkInProgress()
-	if err != nil {
-		return errors.Wrap(err, "Could not mark in progress")
-	}
-	return nil
-}
-
-// TODO: consolidate with RetrieveAndSaveOldConfig(); it's basically the same
-// code
-func SaveTargetClusterConfig(target *utils.Cluster, dbConnector *dbconn.DBConn, stateDir string) error {
-	err := dbConnector.Connect(1)
-	if err != nil {
-		err = errors.Wrap(err, "Could not connect to new cluster")
-		gplog.Error(err.Error())
-		return err
-	}
-	defer dbConnector.Close()
-
-	dbConnector.Version.Initialize(dbConnector)
-	err = os.MkdirAll(stateDir, 0700)
-	if err != nil {
-		return err
-	}
-
-	segConfigs, err := cluster.GetSegmentConfiguration(dbConnector)
-	if err != nil {
-		err := errors.Wrap(err, "Unable to get segment configuration for new cluster")
-		return err
-	}
-	target.Cluster = cluster.NewCluster(segConfigs)
-	target.ConfigPath = filepath.Join(stateDir, utils.TARGET_CONFIG_FILENAME)
-
-	err = target.Commit()
-	return err
 }
 
 func GetCheckpointSegmentsAndEncoding(gpinitsystemConfig []string, dbConnector *dbconn.DBConn) ([]string, error) {

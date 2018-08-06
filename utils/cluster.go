@@ -22,7 +22,7 @@ type Cluster struct {
 	ConfigPath string
 }
 
-func NewMasterOnlyCluster(port int, host string, configPath string) *Cluster {
+func NewMasterOnlyCluster(port int, host string, binDir string, configPath string) *Cluster {
 	master := cluster.SegConfig{
 		DbID:      1,
 		ContentID: -1,
@@ -31,7 +31,7 @@ func NewMasterOnlyCluster(port int, host string, configPath string) *Cluster {
 	}
 
 	cc := cluster.Cluster{Segments: map[int]cluster.SegConfig{-1: master}}
-	c := &Cluster{Cluster: &cc, ConfigPath: configPath}
+	c := &Cluster{Cluster: &cc, BinDir: binDir, ConfigPath: configPath}
 	return c
 }
 
@@ -169,7 +169,7 @@ func (c *Cluster) NewDBConn() *dbconn.DBConn {
 	}
 }
 
-func (c *Cluster) ConnectAndRetrieveConfig(dbConnector *dbconn.DBConn) error {
+func (c *Cluster) RefreshConfig(dbConnector *dbconn.DBConn) error {
 	err := dbConnector.Connect(1)
 	if err != nil {
 		return DatabaseConnectionError{Parent: err}
