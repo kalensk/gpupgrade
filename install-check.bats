@@ -12,10 +12,11 @@ setup() {
     clean_statedir
     kill_hub
     kill_agents
-    run gpstart -a
 }
 
-# XXX: For now, leave system alone the end and push all cleanup into the setup().
+teardown() {
+    gpstart -a
+}
 
 @test "gpugrade can make it as far as we currently know..." {
     gpupgrade prepare init \
