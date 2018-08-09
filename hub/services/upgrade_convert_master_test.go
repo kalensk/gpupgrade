@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	"github.com/greenplum-db/gpupgrade/utils"
 
 	. "github.com/onsi/ginkgo"
@@ -28,8 +29,8 @@ var _ = Describe("ConvertMasterHub", func() {
 		err := hub.ConvertMaster()
 		Expect(err).ToNot(HaveOccurred())
 
-		pgupgrade_dir := filepath.Join(dir, "pg_upgrade")
-		Expect(actualCmdStr).To(Equal(fmt.Sprintf("unset PGHOST; unset PGPORT; cd %s && nohup /target/bindir/pg_upgrade ", pgupgrade_dir) +
+		convert_master_dir := filepath.Join(dir, upgradestatus.CONVERT_MASTER)
+		Expect(actualCmdStr).To(Equal(fmt.Sprintf("unset PGHOST; unset PGPORT; cd %s && nohup /target/bindir/pg_upgrade ", convert_master_dir) +
 			fmt.Sprintf("--old-bindir=/source/bindir --old-datadir=%s/seg-1 --old-port=15432 ", dir) +
 			fmt.Sprintf("--new-bindir=/target/bindir --new-datadir=%s/seg-1 --new-port=15432 ", dir) +
 			"--dispatcher-mode --progress"))

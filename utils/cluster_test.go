@@ -70,39 +70,30 @@ var _ = Describe("Cluster", func() {
 		})
 
 		It("maps all hosts to segment configurations", func() {
-			expected := map[string][]cluster.SegConfig{
-				"localhost": {expectedCluster.Segments[-1]},
-				"host1":     {expectedCluster.Segments[0]},
-				"host2":     {expectedCluster.Segments[1]},
-			}
-			for host, expectedSegments := range expected {
-				segments, err := expectedCluster.SegmentsOn(host)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(segments).To(ConsistOf(expectedSegments))
-			}
+			segments, err := expectedCluster.SegmentsOn("host1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(segments).To(Equal([]cluster.SegConfig{expectedCluster.Segments[0]}))
+
+			segments, err = expectedCluster.SegmentsOn("host2")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(segments).To(Equal([]cluster.SegConfig{expectedCluster.Segments[1]}))
+
+			segments, err = expectedCluster.SegmentsOn("localhost")
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("groups all segments by hostname", func() {
-			c := utils.Cluster{
-				Cluster: &cluster.Cluster{
-					ContentIDs: []int{-1, 0, 1},
-					Segments: map[int]cluster.SegConfig{
-						-1: {ContentID: -1, DbID: 1, Port: 15432, Hostname: "mdw", DataDir: "/seg-1"},
-						0:  {ContentID: 0, DbID: 2, Port: 25432, Hostname: "sdw1", DataDir: "/seg1"},
-						1:  {ContentID: 1, DbID: 3, Port: 25433, Hostname: "sdw1", DataDir: "/seg2"},
-					},
-				},
-			}
+			seg1 := expectedCluster.Segments[1]
+			seg1.Hostname = "host1"
+			expectedCluster.Segments[1] = seg1
 
-			expected := map[string][]cluster.SegConfig{
-				"mdw":  {c.Segments[-1]},
-				"sdw1": {c.Segments[0], c.Segments[1]},
-			}
-			for host, expectedSegments := range expected {
-				segments, err := c.SegmentsOn(host)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(segments).To(ConsistOf(expectedSegments))
-			}
+			expected := []cluster.SegConfig{expectedCluster.Segments[0], expectedCluster.Segments[1]}
+			segments, err := expectedCluster.SegmentsOn("host1")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(segments).To(ConsistOf(expected))
+
+			segments, err = expectedCluster.SegmentsOn("localhost")
+			Expect(err).To(HaveOccurred())
 		})
 	})
 

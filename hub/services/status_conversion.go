@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	pb "github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
 
@@ -20,16 +19,6 @@ func (h *Hub) StatusConversion(ctx context.Context, in *pb.StatusConversionReque
 	if err != nil {
 		return &pb.StatusConversionReply{}, err
 	}
-
-	// Get the master status first, followed by primaries.
-	// XXX This is duplicated between agents and hub, and besides why are we
-	// returning strings instead of structs.
-	format := "%s - DBID %d - CONTENT ID %d - MASTER - %s"
-	status := h.checklist.GetStepReader(upgradestatus.CONVERT_MASTER).Status()
-	master := h.target.Segments[-1]
-	masterStatus := fmt.Sprintf(format, status.String(), master.DbID, master.ContentID, master.Hostname)
-
-	statuses = append(statuses, masterStatus)
 
 	primaryStatuses, err := GetConversionStatusFromPrimaries(agentConnections, h.target)
 	if err != nil {

@@ -94,11 +94,11 @@ func (c *Cluster) PrimaryHostnames() []string {
 }
 
 // SegmentsOn returns the configurations of segments that are running on a given
-// host. An error will be returned for unknown hostnames.
+// host excluding the master. An error will be returned for unknown hostnames.
 func (c Cluster) SegmentsOn(hostname string) ([]cluster.SegConfig, error) {
 	var segments []cluster.SegConfig
 	for _, segment := range c.Segments {
-		if segment.Hostname == hostname {
+		if segment.Hostname == hostname && segment.ContentID != -1 {
 			segments = append(segments, segment)
 		}
 	}

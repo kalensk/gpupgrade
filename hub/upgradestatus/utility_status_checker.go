@@ -31,7 +31,7 @@ func GetUtilityStatus(binaryName, utilityStatePath, dataDir, progressFilePattern
 	switch {
 	case utils.System.IsNotExist(err):
 		return pb.StepStatus_PENDING
-	case isBinaryRunning(binaryName, dataDir, executor) && inProgressFilesExist(utilityStatePath, progressFilePattern):
+	case isBinaryRunning(binaryName, dataDir, executor):
 		return pb.StepStatus_RUNNING
 	case !inProgressFilesExist(utilityStatePath, progressFilePattern) && isCompleteFunc(utilityStatePath):
 		return pb.StepStatus_COMPLETE

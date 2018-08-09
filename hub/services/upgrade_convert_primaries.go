@@ -38,7 +38,7 @@ func (h *Hub) UpgradeConvertPrimaries(ctx context.Context, in *pb.UpgradeConvert
 			})
 
 			if err != nil {
-				gplog.Error("Hub Upgrade Convert Primaries failed to call agent %s with error: ", c.Hostname, err)
+				gplog.Error("Hub Upgrade Convert Primaries failed to call agent %s with error: %v", c.Hostname, err)
 				agentErrs <- err
 			}
 		}(conn)

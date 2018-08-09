@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	pb "github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
 
@@ -63,9 +64,9 @@ var _ = Describe("CommandListener", func() {
 	})
 
 	It("returns running for segments that have the upgrade in progress", func() {
-		err := os.MkdirAll(filepath.Join(dir, "pg_upgrade", "seg-1"), 0700)
+		err := os.MkdirAll(filepath.Join(dir, upgradestatus.CONVERT_PRIMARIES, "seg1"), 0700)
 		Expect(err).ToNot(HaveOccurred())
-		fd, err := os.Create(filepath.Join(dir, "pg_upgrade", "seg-1", ".inprogress"))
+		fd, err := os.Create(filepath.Join(dir, upgradestatus.CONVERT_PRIMARIES, "seg1", ".inprogress"))
 		Expect(err).ToNot(HaveOccurred())
 		fd.Close()
 
@@ -77,8 +78,8 @@ var _ = Describe("CommandListener", func() {
 				Dbid:    3,
 				DataDir: "/old/data/dir",
 			}, {
-				Content: -1,
-				Dbid:    1,
+				Content: 2,
+				Dbid:    4,
 				DataDir: "/old/dir",
 			}},
 			Hostname: "localhost",
@@ -87,14 +88,14 @@ var _ = Describe("CommandListener", func() {
 
 		Expect(status.GetStatuses()).To(Equal([]string{
 			"RUNNING - DBID 3 - CONTENT ID 1 - PRIMARY - localhost",
-			"PENDING - DBID 1 - CONTENT ID -1 - PRIMARY - localhost",
+			"PENDING - DBID 4 - CONTENT ID 2 - PRIMARY - localhost",
 		}))
 	})
 
 	It("returns COMPLETE for segments that have completed the upgrade", func() {
-		err := os.MkdirAll(filepath.Join(dir, "pg_upgrade", "seg--1"), 0700)
+		err := os.MkdirAll(filepath.Join(dir, upgradestatus.CONVERT_PRIMARIES, "seg2"), 0700)
 		Expect(err).ToNot(HaveOccurred())
-		fd, err := os.Create(filepath.Join(dir, "pg_upgrade", "seg--1", ".done"))
+		fd, err := os.Create(filepath.Join(dir, upgradestatus.CONVERT_PRIMARIES, "seg2", ".done"))
 		Expect(err).ToNot(HaveOccurred())
 		fd.WriteString("Upgrade complete\n")
 		fd.Close()
@@ -105,8 +106,8 @@ var _ = Describe("CommandListener", func() {
 				Dbid:    3,
 				DataDir: "/old/data/dir",
 			}, {
-				Content: -1,
-				Dbid:    1,
+				Content: 2,
+				Dbid:    4,
 				DataDir: "/old/dir",
 			}},
 			Hostname: "localhost",
@@ -115,7 +116,7 @@ var _ = Describe("CommandListener", func() {
 
 		Expect(status.GetStatuses()).To(Equal([]string{
 			"PENDING - DBID 3 - CONTENT ID 1 - PRIMARY - localhost",
-			"COMPLETE - DBID 1 - CONTENT ID -1 - PRIMARY - localhost",
+			"COMPLETE - DBID 4 - CONTENT ID 2 - PRIMARY - localhost",
 		}))
 	})
 

@@ -21,7 +21,7 @@ var _ = Describe("status", func() {
 	})
 	Describe("conversion", func() {
 		It("Displays status information for all segments", func() {
-			pathToSegUpgrade := filepath.Join(testStateDir, "pg_upgrade", "seg-0")
+			pathToSegUpgrade := filepath.Join(testStateDir, upgradestatus.CONVERT_PRIMARIES, "seg0")
 			err := os.MkdirAll(pathToSegUpgrade, 0700)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -33,7 +33,6 @@ var _ = Describe("status", func() {
 			statusSession := runCommand("status", "conversion")
 			Eventually(statusSession).Should(Exit(0))
 
-			Eventually(statusSession).Should(gbytes.Say("PENDING - DBID 1 - CONTENT ID -1 - MASTER - .+"))
 			Eventually(statusSession).Should(gbytes.Say("COMPLETE - DBID 2 - CONTENT ID 0 - PRIMARY - .+"))
 		})
 	})

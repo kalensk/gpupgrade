@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	pb "github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
 
@@ -16,7 +17,7 @@ func (s *AgentServer) UpgradeConvertPrimarySegments(ctx context.Context, in *pb.
 	gplog.Info("got a request to convert primary from the hub")
 
 	filename := "pg_upgrade_dump_*_oids.sql"
-	shareOIDfilePath := filepath.Join(s.conf.StateDir, "pg_upgrade", filename)
+	shareOIDfilePath := filepath.Join(s.conf.StateDir, upgradestatus.CONVERT_MASTER, filename)
 	oidFiles, err := utils.System.FilePathGlob(shareOIDfilePath)
 	if err != nil {
 		gplog.Error("ls OID files failed. Err: %v", err)
@@ -24,12 +25,12 @@ func (s *AgentServer) UpgradeConvertPrimarySegments(ctx context.Context, in *pb.
 	}
 	//len(nil) = 0
 	if len(oidFiles) == 0 {
-		gplog.Error("Share OID files do not exist. Err: %s", shareOIDfilePath)
+		gplog.Error("Share OID files do not exist. Pattern was: %s", shareOIDfilePath)
 		return &pb.UpgradeConvertPrimarySegmentsReply{}, errors.New("No OID files found")
 	}
 
 	for _, segment := range in.DataDirPairs {
-		pathToSegment := filepath.Join(s.conf.StateDir, "pg_upgrade", fmt.Sprintf("seg-%d", segment.Content))
+		pathToSegment := filepath.Join(s.conf.StateDir, upgradestatus.CONVERT_PRIMARIES, fmt.Sprintf("seg%d", segment.Content))
 		err := utils.System.MkdirAll(pathToSegment, 0700)
 		if err != nil {
 			gplog.Error("Could not create segment directory. Err: %v", err)

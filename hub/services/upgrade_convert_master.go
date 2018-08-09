@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/greenplum-db/gpupgrade/hub/upgradestatus"
 	pb "github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
 
@@ -26,8 +27,7 @@ func (h *Hub) UpgradeConvertMaster(ctx context.Context, in *pb.UpgradeConvertMas
 }
 
 func (h *Hub) ConvertMaster() error {
-	upgradeFileName := "pg_upgrade"
-	pathToUpgradeWD := filepath.Join(h.conf.StateDir, upgradeFileName)
+	pathToUpgradeWD := filepath.Join(h.conf.StateDir, upgradestatus.CONVERT_MASTER)
 	err := utils.System.MkdirAll(pathToUpgradeWD, 0700)
 	if err != nil {
 		errMsg := fmt.Sprintf("mkdir %s failed: %v. Is there an pg_upgrade in progress?", pathToUpgradeWD, err)
@@ -40,7 +40,8 @@ func (h *Hub) ConvertMaster() error {
 		"--old-bindir=%s --old-datadir=%s --old-port=%d "+
 		"--new-bindir=%s --new-datadir=%s --new-port=%d "+
 		"--dispatcher-mode --progress",
-		pathToUpgradeWD, filepath.Join(h.target.BinDir, "pg_upgrade"),
+		pathToUpgradeWD,
+		filepath.Join(h.target.BinDir, "pg_upgrade"),
 		h.source.BinDir,
 		h.source.MasterDataDir(),
 		h.source.MasterPort(),
