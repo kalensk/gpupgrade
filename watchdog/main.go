@@ -66,12 +66,12 @@ func attach(destSockPath string) error {
 	buf := make([]byte, 64)
 	oob := make([]byte, 64)
 
-	_, oobn, flags, _, err := uds.ReadMsgUnix(buf, oob)
+	bufn, oobn, flags, _, err := uds.ReadMsgUnix(buf, oob)
 	if err != nil {
 		return errors.Wrap(err, "failed to read UDS message")
 	}
 
-	log.Printf("buf: %v, oob: %v, flags: %v\n", buf, oob, flags)
+	log.Printf("buf: %v, oob: %v, flags: %v\n", buf[:bufn], oob[:oobn], flags)
 
 	scms, err := syscall.ParseSocketControlMessage(oob[:oobn])
 	if err != nil {
@@ -119,12 +119,12 @@ func startWatchdog() error {
 
 	buf := make([]byte, 64)
 
-	_, remote, err := uds.ReadFromUnix(buf)
+	bufn, remote, err := uds.ReadFromUnix(buf)
 	if err != nil {
 		return errors.Wrap(err, "error reading from client connection")
 	}
 
-	log.Printf("got %v from %v", buf, remote)
+	log.Printf("got %v from %v", buf[:bufn], remote)
 
 	reader, writer, err := os.Pipe()
 	if err != nil {
