@@ -49,16 +49,14 @@ func main() {
 }
 
 func attach(destSockPath string) error {
-	localSockAddr := &net.UnixAddr{Name: "/tmp/attach.sock", Net: "unixgram"}
-	uds, err := net.ListenUnixgram("unixgram", localSockAddr)
+	destSockAddr := &net.UnixAddr{Name: destSockPath, Net: "unix"}
+	uds, err := net.DialUnix("unix", nil, destSockAddr)
 	if err != nil {
-		return errors.Wrapf(err, "error listening on %s", localSockAddr)
+		return errors.Wrap(err, "error dialing")
 	}
 	defer uds.Close()
-	defer os.Remove(localSockAddr.Name)
 
-	destSockAddr := &net.UnixAddr{Name: destSockPath, Net: "unixgram"}
-	_, _, err = uds.WriteMsgUnix([]byte("ping"), nil, destSockAddr)
+	_, _, err = uds.WriteMsgUnix([]byte("ping"), nil, nil)
 	if err != nil {
 		return errors.Wrap(err, "error writing")
 	}
@@ -109,22 +107,26 @@ func attach(destSockPath string) error {
 }
 
 func startWatchdog() error {
-	sockAddr := &net.UnixAddr{Name: "/tmp/watchdog.sock", Net: "unixgram"}
-	uds, err := net.ListenUnixgram("unixgram", sockAddr)
+	sockAddr := &net.UnixAddr{Name: "/tmp/watchdog.sock", Net: "unix"}
+	listener, err := net.ListenUnix("unix", sockAddr)
 	if err != nil {
 		return errors.Wrap(err, "failed to listen")
 	}
-	defer uds.Close()
-	defer os.Remove(sockAddr.Name)
+	defer listener.Close()
 
 	buf := make([]byte, 64)
 
-	bufn, remote, err := uds.ReadFromUnix(buf)
+	uds, err := listener.AcceptUnix()
+	if err != nil {
+		return errors.Wrap(err, "failed to accept")
+	}
+
+	bufn, _, err := uds.ReadFromUnix(buf)
 	if err != nil {
 		return errors.Wrap(err, "error reading from client connection")
 	}
 
-	log.Printf("got %v from %v", buf[:bufn], remote)
+	log.Printf("got %v", buf[:bufn])
 
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -132,7 +134,7 @@ func startWatchdog() error {
 	}
 	defer writer.Close()
 
-	_, _, err = uds.WriteMsgUnix([]byte("hello"), syscall.UnixRights(int(reader.Fd())), remote)
+	_, _, err = uds.WriteMsgUnix([]byte("hello"), syscall.UnixRights(int(reader.Fd())), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to new UDS connection")
 	}
