@@ -87,20 +87,48 @@ func attach(destSockPath string) error {
 		return errors.Wrap(err, "failed to parse file descriptors...")
 	}
 
-	for _, fd := range fds {
+	done := make(chan error, len(fds))
+	msgs := make([]chan []byte, len(fds))
+
+	for i, fd := range fds {
 		file := os.NewFile(uintptr(fd), "my received file")
 		defer file.Close()
 
-		for {
-			n, err := file.Read(buf)
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return errors.Wrap(err, "failed to read from file")
-			}
+		buff := make([]byte, 64)
+		msgs[i] = make(chan []byte)
+		msg := msgs[i]
 
-			log.Printf("read %v", string(buf[:n]))
+		go func() {
+			for {
+				n, err := file.Read(buff)
+				if err != nil {
+					if err == io.EOF {
+						err = nil
+					}
+					done <- errors.Wrap(err, "failed to read from file")
+					return
+				}
+
+				msg <- buff[:n]
+			}
+		}()
+	}
+
+	doneCount := 0
+	for doneCount < 2 {
+		select {
+		case stdOut := <-msgs[0]:
+			fmt.Print(string(stdOut))
+		case stdErr := <-msgs[1]:
+			_, err := fmt.Fprint(os.Stderr, string(stdErr))
+			if err != nil {
+				return errors.Wrap(err, "failed write to stderr")
+			}
+		case err := <-done:
+			doneCount++
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -129,26 +157,27 @@ func startWatchdog() error {
 
 	log.Printf("got %v", buf[:bufn])
 
-	reader, writer, err := os.Pipe()
+	outReader, outWriter, err := os.Pipe()
 	if err != nil {
-		return errors.Wrap(err, "failed to create pipe")
+		return errors.Wrap(err, "failed to create out pipe")
 	}
-	defer writer.Close()
+	defer outWriter.Close()
 
-	_, _, err = uds.WriteMsgUnix([]byte("hello"), unix.UnixRights(int(reader.Fd())), nil)
+	errReader, errWriter, err := os.Pipe()
+	if err != nil {
+		return errors.Wrap(err, "failed to create err pipe")
+	}
+	defer errWriter.Close()
+
+	_, _, err = uds.WriteMsgUnix([]byte("hello"), unix.UnixRights(int(outReader.Fd()), int(errReader.Fd())), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to new UDS connection")
 	}
 
-	stderr, err := os.Create("watchdog.err")
-	if err != nil {
-		return errors.Wrap(err, "failed to create stderr spill file")
-	}
-
 	cmd := exec.Command("./mock_pg_upgrade")
 
-	cmd.Stdout = writer
-	cmd.Stderr = stderr
+	cmd.Stdout = outWriter
+	cmd.Stderr = errWriter
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(cmd.Stderr, "ERROR: watchdog failed to run due to: +%v", err.Error())
 	}
