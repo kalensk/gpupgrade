@@ -25,28 +25,7 @@ func main() {
 		Long:  `Start the watchdog`,
 		Args:  cobra.MaximumNArgs(0), //no positional args allowed
 		RunE: func(cmd *cobra.Command, args []string) error {
-			/*
-				stdOut := os.Stdout
-				stdErr := os.Stderr
-
-				if shouldDaemonize {
-					var err error
-					stdOut, err = os.Create("watchdog.out")
-					if err != nil {
-						log.Fatalf("failed to open watchdog.out due to: %v", err)
-					}
-
-					stdErr, err = os.Create("watchdog.err")
-					if err != nil {
-						log.Fatalf("failed to open watchdog.err due to: %v", err)
-					}
-
-					daemon.Daemonize()
-				}
-			*/
-
-			//startWatchdog(stdOut, stdErr)
-			return startServer()
+			return startWatchdog()
 		},
 	}
 
@@ -57,67 +36,7 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sockPath := args[0]
-
-			const clientSockPath = "/tmp/client.sock"
-			uds, err := net.ListenPacket("unixgram", clientSockPath)
-			if err != nil {
-				return errors.Wrapf(err, "error listening on %s", clientSockPath)
-			}
-			defer uds.Close()
-
-			watchdogAddr, err := net.ResolveUnixAddr("unixgram", sockPath)
-			if err != nil {
-				return errors.Wrapf(err, "error resolving %s", sockPath)
-			}
-
-			_, _, err = uds.(*net.UnixConn).WriteMsgUnix([]byte("hello"), nil, watchdogAddr)
-			if err != nil {
-				return errors.Wrap(err, "error writing")
-			}
-
-			buf := make([]byte, 64)
-			oob := make([]byte, 64)
-
-			_, oobn, flags, _, err := uds.(*net.UnixConn).ReadMsgUnix(buf, oob)
-			if err != nil {
-				return errors.Wrap(err, "failed to read UDS message")
-			}
-
-			log.Printf("buf: %v, oob: %v, flags: %v\n", buf, oob, flags)
-
-			scms, err := syscall.ParseSocketControlMessage(oob[:oobn])
-			if err != nil {
-				return errors.Wrap(err, "failed to parse OOB data")
-			}
-
-			if len(scms) != 1 {
-				log.Panic("OMG")
-			}
-
-			scm := scms[0]
-			fds, err := syscall.ParseUnixRights(&scm)
-			if err != nil {
-				return errors.Wrap(err, "failed to parse file descriptors...")
-			}
-
-			for _, fd := range fds {
-				file := os.NewFile(uintptr(fd), "my received file")
-				defer file.Close()
-
-				for {
-					n, err := file.Read(buf)
-					if err == io.EOF {
-						break
-					}
-					if err != nil {
-						return errors.Wrap(err, "failed to read from file")
-					}
-
-					log.Printf("read %v", string(buf[:n]))
-				}
-			}
-
-			return err
+			return attach(sockPath)
 		},
 	})
 
@@ -129,32 +48,77 @@ func main() {
 	}
 }
 
-func startServer() error {
-	const sockPath = "/tmp/watchdog.sock"
-	defer os.Remove(sockPath)
-
-	/*
-		listener, err := net.ListenUnix("unix", sockAddr)
-		if err != nil {
-			return errors.Wrap(err, "listen error")
-		}
-		defer listener.Close()
-
-		conn, err := listener.AcceptUnix()
-		if err != nil {
-			return errors.Wrap(err, "accept error")
-		}
-	*/
-
-	conn, err := net.ListenPacket("unixgram", sockPath)
+func attach(destSockPath string) error {
+	localSockAddr := &net.UnixAddr{Name: "/tmp/attach.sock", Net: "unixgram"}
+	uds, err := net.ListenUnixgram("unixgram", localSockAddr)
 	if err != nil {
-		return errors.Wrap(err, "failed to dial")
+		return errors.Wrapf(err, "error listening on %s", localSockAddr)
 	}
-	defer conn.Close()
+	defer uds.Close()
+	defer os.Remove(localSockAddr.Name)
+
+	destSockAddr := &net.UnixAddr{Name: destSockPath, Net: "unixgram"}
+	_, _, err = uds.WriteMsgUnix([]byte("ping"), nil, destSockAddr)
+	if err != nil {
+		return errors.Wrap(err, "error writing")
+	}
+
+	buf := make([]byte, 64)
+	oob := make([]byte, 64)
+
+	_, oobn, flags, _, err := uds.ReadMsgUnix(buf, oob)
+	if err != nil {
+		return errors.Wrap(err, "failed to read UDS message")
+	}
+
+	log.Printf("buf: %v, oob: %v, flags: %v\n", buf, oob, flags)
+
+	scms, err := syscall.ParseSocketControlMessage(oob[:oobn])
+	if err != nil {
+		return errors.Wrap(err, "failed to parse OOB data")
+	}
+
+	if len(scms) != 1 {
+		log.Panic("OMG")
+	}
+
+	scm := scms[0]
+	fds, err := syscall.ParseUnixRights(&scm)
+	if err != nil {
+		return errors.Wrap(err, "failed to parse file descriptors...")
+	}
+
+	for _, fd := range fds {
+		file := os.NewFile(uintptr(fd), "my received file")
+		defer file.Close()
+
+		for {
+			n, err := file.Read(buf)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return errors.Wrap(err, "failed to read from file")
+			}
+
+			log.Printf("read %v", string(buf[:n]))
+		}
+	}
+
+	return err
+}
+
+func startWatchdog() error {
+	sockAddr := &net.UnixAddr{Name: "/tmp/watchdog.sock", Net: "unixgram"}
+	uds, err := net.ListenUnixgram("unixgram", sockAddr)
+	if err != nil {
+		return errors.Wrap(err, "failed to listen")
+	}
+	defer uds.Close()
+	defer os.Remove(sockAddr.Name)
 
 	buf := make([]byte, 64)
 
-	uds := conn.(*net.UnixConn)
 	_, remote, err := uds.ReadFromUnix(buf)
 	if err != nil {
 		return errors.Wrap(err, "error reading from client connection")
@@ -178,19 +142,13 @@ func startServer() error {
 		return errors.Wrap(err, "failed to create stderr spill file")
 	}
 
-	startWatchdog(writer, stderr)
+	cmd := exec.Command("./mock_pg_upgrade")
 
-	return nil
-}
-
-func startWatchdog(stdOut io.Writer, stdErr io.Writer) {
-
-	cmd := exec.Command("mock_pg_upgrade")
-
-	cmd.Stdout = stdOut
-	cmd.Stderr = stdErr
-	err := cmd.Run()
-	if err != nil {
+	cmd.Stdout = writer
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(cmd.Stderr, "ERROR: watchdog failed to run due to: +%v", err.Error())
 	}
+
+	return nil
 }
