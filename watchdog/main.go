@@ -7,7 +7,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/greenplum-db/gpupgrade/utils/daemon"
 	"github.com/pkg/errors"
@@ -71,7 +72,7 @@ func attach(destSockPath string) error {
 
 	log.Printf("buf: %v, oob: %v, flags: %v\n", buf[:bufn], oob[:oobn], flags)
 
-	scms, err := syscall.ParseSocketControlMessage(oob[:oobn])
+	scms, err := unix.ParseSocketControlMessage(oob[:oobn])
 	if err != nil {
 		return errors.Wrap(err, "failed to parse OOB data")
 	}
@@ -81,7 +82,7 @@ func attach(destSockPath string) error {
 	}
 
 	scm := scms[0]
-	fds, err := syscall.ParseUnixRights(&scm)
+	fds, err := unix.ParseUnixRights(&scm)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse file descriptors...")
 	}
@@ -134,7 +135,7 @@ func startWatchdog() error {
 	}
 	defer writer.Close()
 
-	_, _, err = uds.WriteMsgUnix([]byte("hello"), syscall.UnixRights(int(reader.Fd())), nil)
+	_, _, err = uds.WriteMsgUnix([]byte("hello"), unix.UnixRights(int(reader.Fd())), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to new UDS connection")
 	}
