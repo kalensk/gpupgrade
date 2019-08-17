@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
@@ -37,7 +38,12 @@ func main() {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sockPath := args[0]
-			return attach(sockPath)
+			err := attach(sockPath)
+			if err, ok := err.(*WatchDogExitCode); ok {
+				os.Exit(err.ExitCode)
+			}
+
+			return err
 		},
 	})
 
@@ -62,7 +68,7 @@ func attach(destSockPath string) error {
 		return errors.Wrap(err, "error writing")
 	}
 
-	buf := make([]byte, 64)
+	buf := make([]byte, 1)
 	oob := make([]byte, 64)
 
 	bufn, oobn, flags, _, err := uds.ReadMsgUnix(buf, oob)
@@ -132,7 +138,21 @@ func attach(destSockPath string) error {
 		}
 	}
 
-	return err
+	var exitCode int32
+	err = binary.Read(uds, binary.LittleEndian, &exitCode)
+	if err != nil {
+		return errors.Wrap(err, "failed to read exit code")
+	}
+
+	return &WatchDogExitCode{ExitCode: int(exitCode)}
+}
+
+type WatchDogExitCode struct {
+	ExitCode int
+}
+
+func (e *WatchDogExitCode) Error() string {
+	return fmt.Sprintf("exit code %d", e.ExitCode)
 }
 
 func startWatchdog() error {
@@ -169,7 +189,7 @@ func startWatchdog() error {
 	}
 	defer errWriter.Close()
 
-	_, _, err = uds.WriteMsgUnix([]byte("hello"), unix.UnixRights(int(outReader.Fd()), int(errReader.Fd())), nil)
+	_, _, err = uds.WriteMsgUnix([]byte{1}, unix.UnixRights(int(outReader.Fd()), int(errReader.Fd())), nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to write to new UDS connection")
 	}
@@ -178,9 +198,18 @@ func startWatchdog() error {
 
 	cmd.Stdout = outWriter
 	cmd.Stderr = errWriter
-	if err := cmd.Run(); err != nil {
+	err = cmd.Run()
+
+	_, isExitError := err.(*exec.ExitError)
+
+	if err != nil && !isExitError {
 		fmt.Fprintf(cmd.Stderr, "ERROR: watchdog failed to run due to: +%v", err.Error())
 	}
 
-	return nil
+	err = binary.Write(uds, binary.LittleEndian, int32(cmd.ProcessState.ExitCode()))
+	if err != nil {
+		return errors.Wrap(err, "failed to write exit code")
+	}
+
+	return err
 }
