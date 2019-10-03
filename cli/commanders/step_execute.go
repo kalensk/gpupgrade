@@ -25,16 +25,11 @@ func Execute(client idl.CliToHubClient, verbose bool) error {
 			break
 		}
 
-		if chunk.Status == idl.StepStatus_RUNNING {
+		if chunk.Status != idl.StepStatus_UNKNOWN_STATUS {
 			output := fmt.Sprintf("%s ", chunk.Step.String())
 			os.Stdout.WriteString(output)
 			output = fmt.Sprintf("%s\n", chunk.Status.String())
 			os.Stdout.WriteString(output)
-		}
-
-		if chunk.Status == idl.StepStatus_COMPLETE {
-			os.Stdout.WriteString(chunk.Step.String())
-			os.Stdout.WriteString(idl.StepStatus_COMPLETE.String())
 		}
 
 		if verbose {
