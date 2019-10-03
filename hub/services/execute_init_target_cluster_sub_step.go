@@ -19,8 +19,15 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (h *Hub) ExecuteInitTargetClusterSubStep() error {
+func (h *Hub) ExecuteInitTargetClusterSubStep(stream idl.CliToHub_ExecuteServer) error {
 	gplog.Info("starting %s", upgradestatus.INIT_CLUSTER)
+
+	chunk := idl.Chunk{
+		Status: idl.StepStatus_RUNNING,
+		Step: idl.UpgradeSteps_INIT_CLUSTER,
+	}
+
+	stream.Send(&chunk)
 
 	step, err := h.InitializeStep(upgradestatus.INIT_CLUSTER)
 	if err != nil {
@@ -34,6 +41,11 @@ func (h *Hub) ExecuteInitTargetClusterSubStep() error {
 		step.MarkFailed()
 	} else {
 		step.MarkComplete()
+		chunk := idl.Chunk{
+			Status: idl.StepStatus_COMPLETE,
+			Step: idl.UpgradeSteps_INIT_CLUSTER,
+		}
+		stream.Send(&chunk)
 	}
 
 	return err

@@ -5,7 +5,7 @@ import (
 )
 
 func (h *Hub) Execute (request *idl.ExecuteRequest, stream idl.CliToHub_ExecuteServer) error {
-	err := h.ExecuteInitTargetClusterSubStep()
+	err := h.ExecuteInitTargetClusterSubStep(stream)
 	if err != nil {
 		return err
 	}

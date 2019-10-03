@@ -2,6 +2,7 @@ package commanders
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/greenplum-db/gpupgrade/idl"
 )
 
-func Execute(client idl.CliToHubClient) error {
+func Execute(client idl.CliToHubClient, verbose bool) error {
 	stream, err := client.Execute(context.Background(), &idl.ExecuteRequest{})
 	if err != nil {
 		// TODO: Change the logging message?
@@ -23,10 +24,25 @@ func Execute(client idl.CliToHubClient) error {
 		if err != nil {
 			break
 		}
-		if chunk.Type == idl.Chunk_STDOUT {
-			os.Stdout.Write(chunk.Buffer)
-		} else if chunk.Type == idl.Chunk_STDERR {
-			os.Stderr.Write(chunk.Buffer)
+
+		if chunk.Status == idl.StepStatus_RUNNING {
+			output := fmt.Sprintf("%s ", chunk.Step.String())
+			os.Stdout.WriteString(output)
+			output = fmt.Sprintf("%s\n", chunk.Status.String())
+			os.Stdout.WriteString(output)
+		}
+
+		if chunk.Status == idl.StepStatus_COMPLETE {
+			os.Stdout.WriteString(chunk.Step.String())
+			os.Stdout.WriteString(idl.StepStatus_COMPLETE.String())
+		}
+
+		if verbose {
+			if chunk.Type == idl.Chunk_STDOUT {
+				os.Stdout.Write(chunk.Buffer)
+			} else if chunk.Type == idl.Chunk_STDERR {
+				os.Stderr.Write(chunk.Buffer)
+			}
 		}
 	}
 

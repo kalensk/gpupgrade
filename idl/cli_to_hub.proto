@@ -72,6 +72,8 @@ enum StepStatus {
     FAILED = 4;
 }
 
+
+
 message CountPerDb {
     string DbName = 1;
     int32 AoCount = 2;
@@ -106,6 +108,8 @@ message Chunk {
     STDERR = 2;
   }
   Type type = 2;
+  StepStatus status = 3;
+  UpgradeSteps step = 4;
 }
 
 message SetConfigRequest {
