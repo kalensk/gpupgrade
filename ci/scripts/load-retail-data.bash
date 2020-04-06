@@ -94,6 +94,7 @@ time ssh mdw <<EOF
     export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
     PGPORT=${SOURCE_MASTER_PORT} gpstop -ar
 
+
     cd /home/gpadmin/industry_demo
     psql -d gpdb_demo -e -f data_generation/prep_UDFs.sql
 
@@ -108,13 +109,20 @@ time ssh mdw <<EOF
     # generating data
     psql -d gpdb_demo -e -f data_generation/gen_order_base.sql
     psql -d gpdb_demo -e -f data_generation/gen_facts.sql
+
     psql -d gpdb_demo -e -f data_generation/gen_load_files.sql
     psql -d gpdb_demo -e -f data_generation/load_RFMT_Scores.sql
 
     # verifying data
     # TODO: assert on the output of verification script
     psql -d gpdb_demo -e -f data_generation/verify_data.sql
+
+    # restart the cluster and run gpcheckcat
+    gpstop -rai
+    gpcheckcat -p 5432 gpdb_demo
 EOF
+
+
 
 # perform upgrade fixups:
 # - remove gphdfs from the source 5X cluster
@@ -124,6 +132,7 @@ ssh mdw "
     set -x
 
     source ${GPHOME_OLD}/greenplum_path.sh
+    export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
     psql -d gpdb_demo <<SQL_EOF
         CREATE OR REPLACE FUNCTION drop_gphdfs() RETURNS VOID AS \\\$\\\$
         DECLARE
