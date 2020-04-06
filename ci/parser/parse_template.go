@@ -33,6 +33,7 @@ type UpgradeJob struct {
 	PrimariesOnly  bool
 	NoStandby      bool
 	UseLinkMode    bool
+	RetailDemo     bool
 }
 
 type Data struct {
@@ -63,6 +64,7 @@ func init() {
 		{UseLinkMode: true},
 		{PrimariesOnly: true},
 		{NoStandby: true},
+		{RetailDemo: true},
 	}
 
 	for _, job := range special {
