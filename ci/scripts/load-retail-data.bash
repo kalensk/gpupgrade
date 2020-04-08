@@ -118,7 +118,7 @@ time ssh mdw <<EOF
     psql -d gpdb_demo -e -f data_generation/verify_data.sql
 
     # restart the cluster
-    # gpstop -rai
+    gpstop -rai
 EOF
 
 
@@ -171,7 +171,5 @@ ssh mdw "
         ALTER TABLE retail_demo.order_lineitems SET SCHEMA retail_parts;
         ALTER TABLE retail_demo.shipment_lineitems SET SCHEMA retail_parts;
         ALTER TABLE retail_demo.orders SET SCHEMA retail_parts;
-
-        gpcheckcat -p ${SOURCE_MASTER_PORT} gpdb_demo
 SQL_EOF
 "
