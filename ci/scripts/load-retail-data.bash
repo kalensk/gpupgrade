@@ -118,7 +118,7 @@ time ssh mdw <<EOF
     psql -d gpdb_demo -e -f data_generation/verify_data.sql
 
     # restart the cluster
-    psql -d gpdb_demo -e -c "checkpoint"
+#    psql -d gpdb_demo -e -c "checkpoint"
 EOF
 
 
