@@ -22,7 +22,7 @@ func (s *Server) UpdateDataDirectories() error {
 func UpdateDataDirectories(conf *Config, agentConns []*Connection) error {
 	source := conf.Source.MasterDataDir()
 	target := conf.TargetInitializeConfig.Master.DataDir
-	if err := upgrade.RenameDataDirectory(source, source+upgrade.OldSuffix, target, true); err != nil {
+	if err := upgrade.ArchiveAndSwapDirectories(source, source+upgrade.OldSuffix, target, false); err != nil {
 		return xerrors.Errorf("renaming master data directories: %w", err)
 	}
 
@@ -61,18 +61,19 @@ func getRenameMap(source *greenplum.Cluster, target InitializeConfig, sourcePrim
 		seg := source.Primaries[content]
 		if !seg.IsMaster() {
 			m[seg.Hostname] = append(m[seg.Hostname], &idl.RenameDirectories{
-				Source:       seg.DataDir,
-				Archive:      seg.DataDir + upgrade.OldSuffix,
-				Target:       targetMap[content],
-				RenameTarget: true,
+				Source:      seg.DataDir,
+				Archive:     seg.DataDir + upgrade.OldSuffix,
+				Target:      targetMap[content],
+				ArchiveOnly: false,
 			})
 		}
 
 		seg, ok := source.Mirrors[content]
 		if !sourcePrimariesOnly && ok {
 			m[seg.Hostname] = append(m[seg.Hostname], &idl.RenameDirectories{
-				Source:  seg.DataDir,
-				Archive: seg.DataDir + upgrade.OldSuffix,
+				Source:      seg.DataDir,
+				Archive:     seg.DataDir + upgrade.OldSuffix,
+				ArchiveOnly: true,
 			})
 		}
 	}

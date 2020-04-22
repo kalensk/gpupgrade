@@ -190,46 +190,51 @@ func TestUpdateDataDirectories(t *testing.T) {
 		// locations.
 		sdw1 := mock_idl.NewMockAgentClient(ctrl)
 		expectRenames(sdw1, []*idl.RenameDirectories{{
-			Source:       "/data/dbfast1/seg1",
-			Archive:      "/data/dbfast1/seg1_old",
-			Target:       "/data/dbfast1/seg1_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast1/seg1",
+			Archive:     "/data/dbfast1/seg1_old",
+			Target:      "/data/dbfast1/seg1_123ABC",
+			ArchiveOnly: false,
 		}, {
-			Source:  "/data/dbfast_mirror1/seg1",
-			Archive: "/data/dbfast_mirror1/seg1_old",
+			Source:      "/data/dbfast_mirror1/seg1",
+			Archive:     "/data/dbfast_mirror1/seg1_old",
+			ArchiveOnly: true,
 		}, {
-			Source:       "/data/dbfast1/seg3",
-			Archive:      "/data/dbfast1/seg3_old",
-			Target:       "/data/dbfast1/seg3_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast1/seg3",
+			Archive:     "/data/dbfast1/seg3_old",
+			Target:      "/data/dbfast1/seg3_123ABC",
+			ArchiveOnly: false,
 		}, {
-			Source:  "/data/dbfast_mirror1/seg3",
-			Archive: "/data/dbfast_mirror1/seg3_old",
+			Source:      "/data/dbfast_mirror1/seg3",
+			Archive:     "/data/dbfast_mirror1/seg3_old",
+			ArchiveOnly: true,
 		}})
 
 		sdw2 := mock_idl.NewMockAgentClient(ctrl)
 		expectRenames(sdw2, []*idl.RenameDirectories{{
-			Source:       "/data/dbfast2/seg2",
-			Archive:      "/data/dbfast2/seg2_old",
-			Target:       "/data/dbfast2/seg2_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast2/seg2",
+			Archive:     "/data/dbfast2/seg2_old",
+			Target:      "/data/dbfast2/seg2_123ABC",
+			ArchiveOnly: false,
 		}, {
-			Source:  "/data/dbfast_mirror2/seg2",
-			Archive: "/data/dbfast_mirror2/seg2_old",
+			Source:      "/data/dbfast_mirror2/seg2",
+			Archive:     "/data/dbfast_mirror2/seg2_old",
+			ArchiveOnly: true,
 		}, {
-			Source:       "/data/dbfast2/seg4",
-			Archive:      "/data/dbfast2/seg4_old",
-			Target:       "/data/dbfast2/seg4_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast2/seg4",
+			Archive:     "/data/dbfast2/seg4_old",
+			Target:      "/data/dbfast2/seg4_123ABC",
+			ArchiveOnly: false,
 		}, {
-			Source:  "/data/dbfast_mirror2/seg4",
-			Archive: "/data/dbfast_mirror2/seg4_old",
+			Source:      "/data/dbfast_mirror2/seg4",
+			Archive:     "/data/dbfast_mirror2/seg4_old",
+			ArchiveOnly: true,
 		}})
 
 		standby := mock_idl.NewMockAgentClient(ctrl)
 		expectRenames(standby, []*idl.RenameDirectories{{
-			Source:  "/data/standby",
-			Archive: "/data/standby_old",
+			Source:      "/data/standby",
+			Archive:     "/data/standby_old",
+			ArchiveOnly: true,
 		}})
 
 		agentConns := []*hub.Connection{
@@ -258,15 +263,15 @@ func TestUpdateDataDirectories(t *testing.T) {
 			"/data/dbfast_mirror1/seg3",
 		})
 		expectRenames(sdw1, []*idl.RenameDirectories{{
-			Source:       "/data/dbfast1/seg1",
-			Archive:      "/data/dbfast1/seg1_old",
-			Target:       "/data/dbfast1/seg1_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast1/seg1",
+			Archive:     "/data/dbfast1/seg1_old",
+			Target:      "/data/dbfast1/seg1_123ABC",
+			ArchiveOnly: false,
 		}, {
-			Source:       "/data/dbfast1/seg3",
-			Archive:      "/data/dbfast1/seg3_old",
-			Target:       "/data/dbfast1/seg3_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast1/seg3",
+			Archive:     "/data/dbfast1/seg3_old",
+			Target:      "/data/dbfast1/seg3_123ABC",
+			ArchiveOnly: false,
 		}})
 
 		sdw2 := mock_idl.NewMockAgentClient(ctrl)
@@ -275,15 +280,15 @@ func TestUpdateDataDirectories(t *testing.T) {
 			"/data/dbfast_mirror2/seg4",
 		})
 		expectRenames(sdw2, []*idl.RenameDirectories{{
-			Source:       "/data/dbfast2/seg2",
-			Archive:      "/data/dbfast2/seg2_old",
-			Target:       "/data/dbfast2/seg2_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast2/seg2",
+			Archive:     "/data/dbfast2/seg2_old",
+			Target:      "/data/dbfast2/seg2_123ABC",
+			ArchiveOnly: false,
 		}, {
-			Source:       "/data/dbfast2/seg4",
-			Archive:      "/data/dbfast2/seg4_old",
-			Target:       "/data/dbfast2/seg4_123ABC",
-			RenameTarget: true,
+			Source:      "/data/dbfast2/seg4",
+			Archive:     "/data/dbfast2/seg4_old",
+			Target:      "/data/dbfast2/seg4_123ABC",
+			ArchiveOnly: false,
 		}})
 
 		standby := mock_idl.NewMockAgentClient(ctrl)

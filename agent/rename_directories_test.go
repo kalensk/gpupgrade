@@ -24,7 +24,7 @@ func TestRenameDirectories(t *testing.T) {
 		}
 
 		expected := errors.New("permission denied")
-		agent.RenameDataDirectory = func(source, archive, target string, renameTarget bool) error {
+		agent.ArchiveAndSwapDirectories = func(source, archive, target string, renameTarget bool) error {
 			return expected
 		}
 
