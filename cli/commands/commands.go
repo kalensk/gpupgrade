@@ -320,10 +320,7 @@ func initialize() *cobra.Command {
 				)
 			}
 
-			ports, err := parsePorts(ports)
-			if err != nil {
-				return err
-			}
+			parsePorts(ports)
 
 			// If we got here, the args are okay and the user doesn't need a usage
 			// dump on failure.
