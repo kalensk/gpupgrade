@@ -54,6 +54,7 @@ var SubstepDescriptions = map[idl.Substep]substepText{
 	idl.Substep_ARCHIVE_LOG_DIRECTORIES:                  substepText{"Archiving log directories...", "Archive log directories"},
 	idl.Substep_RESTORE_SOURCE_MASTER_AND_PRIMARIES:      substepText{"Restoring source cluster data directories...", "Restore source cluster data directories"},
 	idl.Substep_START_SOURCE_CLUSTER:                     substepText{"Starting source cluster...", "Start source cluster"},
+	idl.Substep_RESTORE_MIRRORS:                          substepText{"Restoring source cluster mirrors...", "Restore source cluster mirrors"},
 }
 
 var indicators = map[idl.Status]string{
