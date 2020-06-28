@@ -14,3 +14,26 @@ jobs:
         with:
           # Required: the version of golangci-lint specified without patch version
           version: v1.26
+  noinstall-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: make check
+        shell: bash
+        run: |
+          # get tags for current branch so make works when getting version
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+          env
+          pwd
+          # install BATS
+          # XXX: clone into
+          cd /tmp
+          env -i git clone --depth 1 https://github.com/sstephenson/bats
+          cd -
+          export PATH=$PATH:/tmp/bats/bin
+
+          export GOFLAGS="-mod=readonly" # do not update dependencies during build
+          echo "about to run make..."
+          make
+          echo "done making..."
+          make check --keep-going
