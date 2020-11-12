@@ -102,6 +102,15 @@ func GetTablespaceDir() string {
 	return filepath.Join(GetStateDir(), "tablespaces")
 }
 
+func GetDataMigrationInputDir() string {
+	// TODO rename data_migration_scripts to data-migration-scripts
+	return filepath.Join("/", "usr", "local", "greenplum-upgrade", ".data-migration-scripts")
+}
+
+func GetDataMigrationOutputDir() string {
+	return filepath.Join("/", "var", "greenplum", "upgrade", "data_migration")
+}
+
 // Returns path to a JSON file, and if one does not exist it creates an empty
 // JSON file.
 func GetJSONFile(stateDir string, fileName string) (path string, err error) {

@@ -99,6 +99,7 @@ Optional Flags:
 
 gpupgrade log files can be found on all hosts in %s
 `
+
 const executeHelp = `
 Upgrades the master and primary segments to the target Greenplum version.
 This command should be run only during a downtime window.
@@ -117,6 +118,7 @@ Optional Flags:
 
 gpupgrade log files can be found on all hosts in %s
 `
+
 const finalizeHelp = `
 Upgrades the standby master and mirror segments to the target Greenplum version.
 This command should be run only during a downtime window.
@@ -138,6 +140,7 @@ Refer to documentation for instructions.
 
 gpupgrade log files can be found on all hosts in %s
 `
+
 const revertHelp = `
 Returns the cluster to its original state.
 This command cannot be run after gpupgrade finalize has begun.
@@ -157,6 +160,49 @@ Refer to documentation for instructions.
 
 Archived gpupgrade log files can be found on all hosts in %s-<upgradeID>-<timestamp>
 `
+
+const migrateDataGenerateHelp = `
+Identifies catalog inconsistencies between the source and target Greenplum versions
+and generates SQL scripts to resolve them. This command should be run prior to "gpupgrade".
+
+Usage: gpupgrade migrate-data generate <flags>
+Required Flags:
+  --source-gphome         the path to the binary directory for the source Greenplum installation
+  --source-master-port    the master port for the source Greenplum installation
+
+Optional Flags:
+  -h, --help               displays help output for initialize
+
+After running inspect the SQL files in the output directory %s
+Then run "gpupgrade migrate-data execute -h" for more information.
+`
+
+const migrateDataExecuteHelp = `
+Executes scripts addressing catalog inconsistencies between Greenplum versions.
+Before running this command, run "gpupgrade migrate-data generate".
+This command should be run only during the downtime window.
+
+Usage: gpupgrade migrate-data generate <flags>
+Required Flags:
+  --source-master-port    the master port for the source Greenplum installation
+  --phase                 either start, complete, revert, stats
+
+Optional Flags:
+  -h, --help               displays help output for initialize
+
+Use cases:
+- Before "gpupgrade initialize", drop and alter objects:
+gpupgrade migrate-data generate --source-master-port 5432 --phase start
+
+- Following "gpupgrade finalize", restore and recreate objects:
+gpupgrade migrate-data generate --source-master-port 5432 --phase complete
+
+- Following "gpupgrade revert", restore objects:
+gpupgrade migrate-data generate --source-master-port 5432 --phase revert
+
+Log files can be found in %s
+`
+
 const GlobalHelp = `
 gpupgrade performs an in-place cluster upgrade to the next major version.
 
@@ -187,8 +233,14 @@ Required Commands: Run the three commands in this order
 
 Optional Commands:
 
-  revert          returns the cluster to its original state
-                  Note: revert cannot be used after gpupgrade finalize
+  revert                   returns the cluster to its original state
+                           Note: revert cannot be used after gpupgrade finalize
+
+  migrate-data generate    Identifies catalog inconsistencies between the source
+                           and target Greenplum versions
+  
+  migrate-data execute     Executes scripts addressing catalog inconsistencies 
+                           between Greenplum versions.
 
 Optional Flags:
 

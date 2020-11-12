@@ -585,6 +585,131 @@ _gpupgrade_kill-services()
     noun_aliases=()
 }
 
+_gpupgrade_migrate-data_migrate-data_help()
+{
+    last_command="gpupgrade_migrate-data_migrate-data_help"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_gpupgrade_migrate-data_migrate-data()
+{
+    last_command="gpupgrade_migrate-data_migrate-data"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("help")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--?")
+    flags+=("-?")
+    local_nonpersistent_flags+=("--?")
+    flags+=("--source-gphome=")
+    two_word_flags+=("--source-gphome")
+    local_nonpersistent_flags+=("--source-gphome=")
+    flags+=("--source-master-port=")
+    two_word_flags+=("--source-master-port")
+    local_nonpersistent_flags+=("--source-master-port=")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_gpupgrade_migrate-data_migrate-data_help()
+{
+    last_command="gpupgrade_migrate-data_migrate-data_help"
+
+    command_aliases=()
+
+    commands=()
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_gpupgrade_migrate-data_migrate-data()
+{
+    last_command="gpupgrade_migrate-data_migrate-data"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("help")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+    flags+=("--?")
+    flags+=("-?")
+    local_nonpersistent_flags+=("--?")
+    flags+=("--phase=")
+    two_word_flags+=("--phase")
+    local_nonpersistent_flags+=("--phase=")
+    flags+=("--source-master-port=")
+    two_word_flags+=("--source-master-port")
+    local_nonpersistent_flags+=("--source-master-port=")
+    flags+=("--verbose")
+    flags+=("-v")
+    local_nonpersistent_flags+=("--verbose")
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
+_gpupgrade_migrate-data()
+{
+    last_command="gpupgrade_migrate-data"
+
+    command_aliases=()
+
+    commands=()
+    commands+=("migrate-data")
+    commands+=("migrate-data")
+
+    flags=()
+    two_word_flags=()
+    local_nonpersistent_flags=()
+    flags_with_completion=()
+    flags_completion=()
+
+
+    must_have_one_flag=()
+    must_have_one_noun=()
+    noun_aliases=()
+}
+
 _gpupgrade_restart-services()
 {
     last_command="gpupgrade_restart-services"
@@ -685,6 +810,7 @@ _gpupgrade_root_command()
     commands+=("help")
     commands+=("initialize")
     commands+=("kill-services")
+    commands+=("migrate-data")
     commands+=("restart-services")
     commands+=("revert")
     commands+=("version")

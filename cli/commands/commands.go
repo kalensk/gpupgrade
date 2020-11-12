@@ -90,6 +90,10 @@ func BuildRootCommand() *cobra.Command {
 	root.AddCommand(Agent())
 	root.AddCommand(Hub())
 
+	root.AddCommand(migrateData)
+	migrateData.AddCommand(migrateDataGenerate())
+	migrateData.AddCommand(migrateDataExecute())
+
 	subConfigShow := createConfigShowSubcommand()
 	config.AddCommand(subConfigShow)
 

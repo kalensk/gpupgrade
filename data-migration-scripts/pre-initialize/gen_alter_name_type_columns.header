@@ -12,9 +12,6 @@
 -- Where not possible, a message is logged, and such tables must be manually
 -- modified to remove the name data type prior to running gpugprade.
 
-\set VERBOSITY terse
-
-\unset ECHO
 CREATE OR REPLACE FUNCTION pg_temp.notsupported(text) RETURNS VOID AS $$
 BEGIN
     RAISE WARNING '---------------------------------------------------------------------------------';
@@ -22,6 +19,3 @@ BEGIN
     RAISE WARNING '---------------------------------------------------------------------------------';
 END
 $$ LANGUAGE plpgsql;
-\set ECHO queries
-
-
