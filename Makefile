@@ -4,11 +4,6 @@
 all: build
 
 .DEFAULT_GOAL := all
-MODULE_NAME=gpupgrade
-
-
-LINUX_ENV := env GOOS=linux GOARCH=amd64
-MAC_ENV := env GOOS=darwin GOARCH=amd64
 
 # depend-dev will install the necessary Go dependencies for running `go
 # generate`. (This recipe does not have to be run in order to build the
@@ -65,86 +60,41 @@ test: unit integration
 coverage:
 	@./scripts/show_coverage.sh
 
-sshd_build:
-		make -C integrations/sshd
-
-BUILD_ENV = $($(OS)_ENV)
-
-.PHONY: build build_linux build_mac
-
+.PHONY: build
 build:
-	# For tagging a release see the "Upgrade Release Checklist" document.
-	$(eval VERSION := $(shell git describe --tags --abbrev=0))
-	$(eval COMMIT := $(shell git rev-parse --short --verify HEAD))
-	$(eval RELEASE=Dev Build)
-	$(eval VERSION_LD_STR := -X 'github.com/greenplum-db/$(MODULE_NAME)/cli/commands.Version=$(VERSION)')
-	$(eval VERSION_LD_STR += -X 'github.com/greenplum-db/$(MODULE_NAME)/cli/commands.Commit=$(COMMIT)')
-	$(eval VERSION_LD_STR += -X 'github.com/greenplum-db/$(MODULE_NAME)/cli/commands.Release=$(RELEASE)')
+	$(BUILD_ENV) ./build.bash build
 
-	$(eval BUILD_FLAGS = -gcflags="all=-N -l")
-	$(eval override BUILD_FLAGS += -ldflags "$(VERSION_LD_STR)")
+.PHONY: build-linux
+build-linux:
+	BUILD_ENV="env GOOS=linux GOARCH=amd64"
+	$(BUILD_ENV) ./build.bash build
 
-	$(BUILD_ENV) go build -o gpupgrade $(BUILD_FLAGS) github.com/greenplum-db/gpupgrade/cmd/gpupgrade
-	go generate ./cli/bash
+.PHONY: build-mac
+build-mac:
+	BUILD_ENVC="env GOOS=darwin GOARCH=amd64"
+	$(BUILD_ENV) ./build.bash build
 
-build_linux: OS := LINUX
-build_mac: OS := MAC
-build_linux build_mac: build
+.PHONY: build
+install: build
+	install ./gpupgrade $GOBIN
 
-BUILD_FLAGS = -gcflags="all=-N -l"
-override BUILD_FLAGS += -ldflags "$(VERSION_LD_STR)"
+export TARBALL_NAME=gpupgrade.tar.gz
 
-enterprise-tarball: RELEASE=Enterprise
-enterprise-tarball: build tarball
+.PHONY: enterprise-tarball
+enterprise-tarball:
+	$(BUILD_ENV) ./build.bash tarball "Enterprise"
 
-oss-tarball: RELEASE=Open Source
-oss-tarball: build tarball
+.PHONY: oss-tarball
+oss-tarball:
+	$(BUILD_ENV) ./build.bash tarball "Open Source"
 
-TARBALL_NAME=gpupgrade.tar.gz
+.PHONY: enterprise-rpm
+enterprise-rpm:
+	$(BUILD_ENV) ./build.bash rpm "Enterprise" "VMware Tanzu Greenplum Upgrade" "VMware Software EULA"
 
-tarball:
-	[ ! -d tarball ] && mkdir tarball
-	# gather files
-	cp gpupgrade tarball
-	cp cli/bash/gpupgrade.bash tarball
-	cp gpupgrade_config tarball
-	cp open_source_licenses.txt tarball
-	cp -r data-migration-scripts/ tarball/data-migration-scripts/
-	# remove test files
-	rm -r tarball/data-migration-scripts/test
-	# create tarball
-	( cd tarball; tar czf ../$(TARBALL_NAME) . )
-	sha256sum $(TARBALL_NAME) > CHECKSUM
-	rm -r tarball
-
-enterprise-rpm: RELEASE=Enterprise
-enterprise-rpm: NAME=VMware Tanzu Greenplum Upgrade
-enterprise-rpm: LICENSE=VMware Software EULA
-enterprise-rpm: enterprise-tarball rpm
-
-oss-rpm: RELEASE=Open Source
-oss-rpm: NAME=Greenplum Database Upgrade
-oss-rpm: LICENSE=Apache 2.0
-oss-rpm: oss-tarball rpm
-
-rpm:
-	[ ! -d rpm ] && mkdir rpm
-	mkdir -p rpm/rpmbuild/{BUILD,RPMS,SOURCES,SPECS}
-	cp $(TARBALL_NAME) rpm/rpmbuild/SOURCES
-	cp gpupgrade.spec rpm/rpmbuild/SPECS/
-	rpmbuild \
-	--define "_topdir $${PWD}/rpm/rpmbuild" \
-	--define "gpupgrade_version $(VERSION)" \
-	--define "gpupgrade_rpm_release 1" \
-	--define "release_type $(RELEASE)" \
-	--define "license $(LICENSE)" \
-	--define "summary $(NAME)" \
-	-bb $${PWD}/rpm/rpmbuild/SPECS/gpupgrade.spec
-	cp rpm/rpmbuild/RPMS/x86_64/gpupgrade-$(VERSION)*.rpm .
-	rm -r rpm
-
-install:
-	go install $(BUILD_FLAGS) github.com/greenplum-db/gpupgrade/cmd/gpupgrade
+.PHONY: oss-rpm
+oss-rpm:
+	$(BUILD_ENV) ./build.bash rpm "Open Source" "Greenplum Database Upgrade" "Apache 2.0"
 
 # To lint, you must install golangci-lint via one of the supported methods
 # listed at
