@@ -76,7 +76,7 @@ build-mac:
 
 .PHONY: build
 install: build
-	install ./gpupgrade $GOBIN
+	$(BUILD_ENV) ./build.bash install
 
 export TARBALL_NAME=gpupgrade.tar.gz
 

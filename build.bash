@@ -4,21 +4,46 @@ set -e -u -o pipefail -x
 
 # For tagging a RELEASE see the "Upgrade Release Checklist" document.
 
+
+# go build -o gpupgrade -gcflags="all=-N -l"
+# -ldflags "-X 'github.com/greenplum-db/gpupgrade/cli/commands.Version=1.0.0'
+# -X 'github.com/greenplum-db/gpupgrade/cli/commands.Commit=cdc26d83'
+# -X 'github.com/greenplum-db/gpupgrade/cli/commands.Release=Dev Build'"
+#
+# -ldflags "-X 'github.com/greenplum-db/gpupgrade/cli/commands.Version=1.0.0'
+# -X 'github.com/greenplum-db/gpupgrade/cli/commands.Commit=cdc26d83'
+# -X 'github.com/greenplum-db/gpupgrade/cli/commands.Release=Dev Build'" github.com/greenplum-db/gpupgrade/cmd/gpupgrade
 binary() {
     VERSION=$(git describe --tags --abbrev=0)
     COMMIT=$(git rev-parse --short --verify HEAD)
 
     local version_ld_str
-    version_ld_str="-X github.com/greenplum-db/gpupgrade/cli/commands.Version=${VERSION}"
-    version_ld_str+=" -X github.com/greenplum-db/gpupgrade/cli/commands.Commit=${COMMIT}"
-    version_ld_str+=" -X github.com/greenplum-db/gpupgrade/cli/commands.Release=${RELEASE}"
+    version_ld_str="-X 'github.com/greenplum-db/gpupgrade/cli/commands.Version=${VERSION}'"
+    version_ld_str+=" -X 'github.com/greenplum-db/gpupgrade/cli/commands.Commit=${COMMIT}'"
+    version_ld_str+=" -X 'github.com/greenplum-db/gpupgrade/cli/commands.Release=${RELEASE}'"
 
     local build_flags
-    build_flags=-gcflags="all=-N -l"
+    build_flags=-gcflags="\"all=-N -l\""
     build_flags+=" -ldflags ${version_ld_str}"
 
     go build -o gpupgrade "${build_flags}" github.com/greenplum-db/gpupgrade/cmd/gpupgrade
     go generate ./cli/bash
+}
+
+install() {
+    VERSION=$(git describe --tags --abbrev=0)
+    COMMIT=$(git rev-parse --short --verify HEAD)
+
+    local version_ld_str
+    version_ld_str="-X \"github.com/greenplum-db/gpupgrade/cli/commands.Version=${VERSION}\""
+    version_ld_str+=" -X \"github.com/greenplum-db/gpupgrade/cli/commands.Commit=${COMMIT}\""
+    version_ld_str+=" -X \"github.com/greenplum-db/gpupgrade/cli/commands.Release=${RELEASE}\""
+
+    local build_flags
+    build_flags=-gcflags="\"all=-N -l\""
+    build_flags+=" -ldflags ${version_ld_str}"
+
+	go install $(build_flags) github.com/greenplum-db/gpupgrade/cmd/gpupgrade
 }
 
 tarball() {
@@ -66,6 +91,10 @@ _main() {
     RELEASE=${2:-Dev Release}
 
     if [ "$1" == "build" ]; then
+        binary "$RELEASE"
+    fi
+
+    if [ "$1" == "install" ]; then
         binary "$RELEASE"
     fi
 
