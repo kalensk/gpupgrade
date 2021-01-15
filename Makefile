@@ -7,9 +7,6 @@ all: build
 MODULE_NAME=gpupgrade
 
 
-LINUX_ENV := env GOOS=linux GOARCH=amd64
-MAC_ENV := env GOOS=darwin GOARCH=amd64
-
 # depend-dev will install the necessary Go dependencies for running `go
 # generate`. (This recipe does not have to be run in order to build the
 # project; only to rebuild generated files.) Note that developers must still
@@ -65,27 +62,9 @@ test: unit integration
 coverage:
 	@./scripts/show_coverage.sh
 
-sshd_build:
-		make -C integrations/sshd
-
-BUILD_ENV = $($(OS)_ENV)
-
-.PHONY: build build_linux build_mac
-
+.PHONY: build
 build:
-	# For tagging a release see the "Upgrade Release Checklist" document.
-	$(eval VERSION := $(shell git describe --tags --abbrev=0))
-	$(eval COMMIT := $(shell git rev-parse --short --verify HEAD))
-	$(eval RELEASE=Dev Build)
-	$(eval VERSION_LD_STR := -X 'github.com/greenplum-db/$(MODULE_NAME)/cli/commands.Version=$(VERSION)')
-	$(eval VERSION_LD_STR += -X 'github.com/greenplum-db/$(MODULE_NAME)/cli/commands.Commit=$(COMMIT)')
-	$(eval VERSION_LD_STR += -X 'github.com/greenplum-db/$(MODULE_NAME)/cli/commands.Release=$(RELEASE)')
-
-	$(eval BUILD_FLAGS = -gcflags="all=-N -l")
-	$(eval override BUILD_FLAGS += -ldflags "$(VERSION_LD_STR)")
-
-	$(BUILD_ENV) go build -o gpupgrade $(BUILD_FLAGS) github.com/greenplum-db/gpupgrade/cmd/gpupgrade
-	go generate ./cli/bash
+	$(BUILD_ENV) ./build.bash build
 
 build_linux: OS := LINUX
 build_mac: OS := MAC
