@@ -1,8 +1,6 @@
 # Copyright (c) 2017-2020 VMware, Inc. or its affiliates
 # SPDX-License-Identifier: Apache-2.0
 
-SHELL := /bin/bash
-
 all: build
 
 .DEFAULT_GOAL := all
@@ -68,13 +66,15 @@ test: unit integration
 coverage:
 	@./scripts/show_coverage.sh
 
-.PHONY: build
+linux-build: OS=LINUX
+linux-build: build
+
+mac-build: OS=MAC
+mac-build: build
+
 build:
 	BUILD_ENV="$(BUILD_ENV)" ./build.bash build
 
-build_linux: OS := LINUX
-build_mac: OS := MAC
-build_linux build_mac: build
 
 enterprise-tarball: RELEASE=Enterprise
 enterprise-tarball: build tarball
@@ -98,6 +98,9 @@ tarball:
 	( cd tarball; tar czf ../$(TARBALL_NAME) . )
 	sha256sum $(TARBALL_NAME) > CHECKSUM
 	rm -r tarball
+
+# To cross compile:
+# `make enterprise-rpm OS=LINUX` or `make enterprise-rpm OS=MAC`
 
 enterprise-rpm: RELEASE=Enterprise
 enterprise-rpm: NAME=VMware Tanzu Greenplum Upgrade

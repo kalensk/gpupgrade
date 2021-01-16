@@ -20,13 +20,9 @@ binary() {
 
     gcflags='-gcflags="all=-N -l"'
 
-	printf "[%s]\n" ${BUILD_ENV}
-
 	env ${BUILD_ENV} go build -o gpupgrade -ldflags "${version_ld_str}" "${gcflags}" github.com/greenplum-db/gpupgrade/cmd/gpupgrade
 	go generate ./cli/bash
 }
-
-
 
 tarball() {
     echo tarball

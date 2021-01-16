@@ -205,5 +205,6 @@ completions directory such as  `/etc/bash_completion.d`.
 ## Building
 
 Cross-compile with:
-- `make build_linux`
-- `make build_mac`
+- `make build OS=LINUX`
+- `make build OS=MAC`
+- `make oss-tarball OS=LINUX`
