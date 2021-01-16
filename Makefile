@@ -70,9 +70,6 @@ build_linux: OS := LINUX
 build_mac: OS := MAC
 build_linux build_mac: build
 
-BUILD_FLAGS = -gcflags="all=-N -l"
-override BUILD_FLAGS += -ldflags "$(VERSION_LD_STR)"
-
 enterprise-tarball: RELEASE=Enterprise
 enterprise-tarball: build tarball
 

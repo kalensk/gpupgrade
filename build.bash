@@ -3,35 +3,27 @@
 # Copyright (c) 2017-2020 VMware, Inc. or its affiliates
 # SPDX-License-Identifier: Apache-2.0
 
-set -e -u -o pipefail -x
-#set -e -o pipefail -x
-
+set -e -o pipefail
 
 install() {
     echo install
 }
 
-# go build -o gpupgrade -gcflags="all=-N -l"
-#   -ldflags "-X 'github.com/greenplum-db/gpupgrade/cli/commands.Version=1.0.0'
-#             -X 'github.com/greenplum-db/gpupgrade/cli/commands.Commit=cdc26d83'
-#             -X 'github.com/greenplum-db/gpupgrade/cli/commands.Release=Dev Release'"
-#   github.com/greenplum-db/gpupgrade/cmd/gpupgrade
-
 binary() {
-    VERSION=$(git describe --tags --abbrev=0)
-	COMMIT=$(git rev-parse --short --verify HEAD)
+    version=$(git describe --tags --abbrev=0)
+	commit=$(git rev-parse --short --verify HEAD)
 
-    local version_ld_str
-	version_ld_str="-X 'github.com/greenplum-db/gpupgrade/cli/commands.Version=${VERSION}'"
-	version_ld_str+=" -X 'github.com/greenplum-db/gpupgrade/cli/commands.Commit=${COMMIT}'"
-	version_ld_str+=" -X 'github.com/greenplum-db/gpupgrade/cli/commands.Release=${RELEASE}'"
+    version_ld_str="
+    -X 'github.com/greenplum-db/gpupgrade/cli/commands.Version=${version}'
+    -X 'github.com/greenplum-db/gpupgrade/cli/commands.Commit=${commit}'
+    -X 'github.com/greenplum-db/gpupgrade/cli/commands.Release=${RELEASE}'"
 
-    local build_flags
-    build_flags="-gcflags=\"all=-N -l\""
-    build_flags+=" -ldflags "${version_ld_str}""
+    gcflags='-gcflags="all=-N -l"'
 
-    # "${BUILD_ENV}"
-	go build -o gpupgrade "${build_flags}" github.com/greenplum-db/gpupgrade/cmd/gpupgrade
+	printf "[%s]\n" "${BUILD_ENV}"
+
+
+	${BUILD_ENV} go build -o gpupgrade -ldflags "${version_ld_str}" "${gcflags}" github.com/greenplum-db/gpupgrade/cmd/gpupgrade
 	go generate ./cli/bash
 }
 
@@ -48,7 +40,7 @@ rpm() {
 _main() {
     # For tagging a RELEASE see the "Upgrade Release Checklist" document.
     local RELEASE
-    RELEASE=${2:-Dev Release}
+    RELEASE="${2:-Dev Release}"
 
     if [ "$1" == "build" ]; then
         binary "$RELEASE"
