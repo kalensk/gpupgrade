@@ -1,11 +1,17 @@
 # Copyright (c) 2017-2020 VMware, Inc. or its affiliates
 # SPDX-License-Identifier: Apache-2.0
 
+SHELL := /bin/bash
+
 all: build
 
 .DEFAULT_GOAL := all
 MODULE_NAME=gpupgrade
 
+LINUX_ENV := GOOS=linux GOARCH=amd64
+MAC_ENV := GOOS=darwin GOARCH=amd64
+
+BUILD_ENV = $($(OS)_ENV)
 
 # depend-dev will install the necessary Go dependencies for running `go
 # generate`. (This recipe does not have to be run in order to build the
@@ -64,7 +70,7 @@ coverage:
 
 .PHONY: build
 build:
-	$(BUILD_ENV) ./build.bash build
+	BUILD_ENV="$(BUILD_ENV)" ./build.bash build
 
 build_linux: OS := LINUX
 build_mac: OS := MAC
