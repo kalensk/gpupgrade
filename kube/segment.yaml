@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seg-deployment
+spec:
+  selector:
+    matchLabels:
+      app: seg
+  replicas: 1 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: seg
+    spec:
+      containers:
+      - name: seg
+        image: pivotaldata/gpdb7-centos7-test
+        ports:
+        - containerPort: 7000

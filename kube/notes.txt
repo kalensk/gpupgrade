@@ -1,0 +1,10 @@
+
+https://kubernetes.io/docs/tasks/run-application/run-stateless-application-deployment/
+
+
+https://pivotal.slack.com/archives/CDEPM84FP/p1611958664089700
+
+pivotaldata/gpdb7-centos7-test
+
+docker network create some-network
+docker run --privileged -v <local dir>/gpdb:/build/gpdb --network some-network --network-alias <hostname> -it <dockerimage> /bin/bash
