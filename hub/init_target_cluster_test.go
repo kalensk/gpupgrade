@@ -192,6 +192,10 @@ func TestWriteSegmentArray(t *testing.T) {
 				{ContentID: 0, DbID: 2, Hostname: "sdw1", DataDir: "/data/dbfast1_upgrade/seg1", Role: "p", Port: 15434},
 				{ContentID: 1, DbID: 3, Hostname: "sdw2", DataDir: "/data/dbfast2_upgrade/seg2", Role: "p", Port: 15434},
 			},
+			Mirrors: []greenplum.SegConfig{
+				{ContentID: 0, DbID: 4, Hostname: "msdw1", DataDir: "/data/dbfast_mirror1_upgrade/seg1", Role: "m", Port: 15434},
+				{ContentID: 1, DbID: 5, Hostname: "msdw2", DataDir: "/data/dbfast_mirror2_upgrade/seg2", Role: "m", Port: 15434},
+			},
 		}
 
 		test(t, config, []string{
@@ -199,6 +203,10 @@ func TestWriteSegmentArray(t *testing.T) {
 			"declare -a PRIMARY_ARRAY=(",
 			"\tsdw1~sdw1~15434~/data/dbfast1_upgrade/seg1~2~0",
 			"\tsdw2~sdw2~15434~/data/dbfast2_upgrade/seg2~3~1",
+			")",
+			"declare -a MIRROR_ARRAY=(",
+			"\tmsdw1~msdw1~15434~/data/dbfast_mirror1_upgrade/seg1~4~0",
+			"\tmsdw2~msdw2~15434~/data/dbfast_mirror2_upgrade/seg2~5~1",
 			")",
 		})
 	})

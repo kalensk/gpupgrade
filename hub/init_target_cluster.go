@@ -199,6 +199,21 @@ func WriteSegmentArray(config []string, targetInitializeConfig InitializeConfig)
 	}
 	config = append(config, ")")
 
+	config = append(config, "declare -a MIRROR_ARRAY=(")
+	for _, segment := range targetInitializeConfig.Mirrors {
+		config = append(config,
+			fmt.Sprintf("\t%s~%s~%d~%s~%d~%d",
+				segment.Hostname,
+				segment.Hostname,
+				segment.Port,
+				segment.DataDir,
+				segment.DbID,
+				segment.ContentID,
+			),
+		)
+	}
+	config = append(config, ")")
+
 	return config, nil
 }
 
