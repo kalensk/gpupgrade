@@ -53,7 +53,7 @@ func (s *Server) writeConf(sourceDBConn *dbconn.DBConn) error {
 		return err
 	}
 
-	gpinitsystemConfig, err = WriteSegmentArray(gpinitsystemConfig, s.TargetInitializeConfig)
+	gpinitsystemConfig, err = WriteSegmentArray(gpinitsystemConfig, s.TargetInitializeConfig, s.UseLinkMode)
 	if err != nil {
 		return xerrors.Errorf("generating segment array: %w", err)
 	}
@@ -166,7 +166,7 @@ func WriteInitsystemFile(gpinitsystemConfig []string, gpinitsystemFilepath strin
 	return nil
 }
 
-func WriteSegmentArray(config []string, targetInitializeConfig InitializeConfig) ([]string, error) {
+func WriteSegmentArray(config []string, targetInitializeConfig InitializeConfig, linkMode bool) ([]string, error) {
 	//Partition segments by host in order to correctly assign ports.
 	if targetInitializeConfig.Master == (greenplum.SegConfig{}) {
 		return nil, errors.New("source cluster contains no master segment")
@@ -198,6 +198,26 @@ func WriteSegmentArray(config []string, targetInitializeConfig InitializeConfig)
 		)
 	}
 	config = append(config, ")")
+
+	// Note this if condition would not be needed if we "manually" add the
+	// mirrors in link mode when upgrading in-place.
+	if linkMode {
+		config = append(config, "declare -a MIRROR_ARRAY=(")
+		for _, segment := range targetInitializeConfig.Mirrors {
+			config = append(config,
+				fmt.Sprintf("\t%s~%s~%d~%s~%d~%d",
+					segment.Hostname,
+					segment.Hostname,
+					segment.Port,
+					segment.DataDir,
+					segment.DbID,
+					segment.ContentID,
+				),
+			)
+		}
+
+		config = append(config, ")")
+	}
 
 	return config, nil
 }
