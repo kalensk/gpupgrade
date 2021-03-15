@@ -78,6 +78,18 @@ func Run(p SegmentPair, targetVersion semver.Version, options ...Option) error {
 		args = append(args, "--old-options", opts.OldOptions)
 	}
 
+	if opts.CreateTemplate {
+		args = append(args, "--template")
+	}
+
+	if opts.TemplateDataDir != "" {
+		args = append(args, "--template-datadir", opts.TemplateDataDir)
+	}
+
+	if opts.TemplatePort != 0 {
+		args = append(args, "--template-port", strconv.Itoa(opts.TemplatePort))
+	}
+
 	// If the caller specified an explicit Command implementation to use, get
 	// our exec.Cmd using that. Otherwise use our internal execCommand.
 	cmdFunc := execCommand
@@ -178,6 +190,24 @@ func WithOldOptions(opts string) Option {
 	}
 }
 
+func CreateTemplate() Option {
+	return func(o *optionList) {
+		o.CreateTemplate = true
+	}
+}
+
+func TemplateDataDir(templateDataDir string) Option {
+	return func(o *optionList) {
+		o.TemplateDataDir = templateDataDir
+	}
+}
+
+func TemplatePort(templatePort int) Option {
+	return func(o *optionList) {
+		o.TemplatePort = templatePort
+	}
+}
+
 // optionList holds the combined result of all possible Options. Zero values
 // represent the default settings.
 type optionList struct {
@@ -190,6 +220,9 @@ type optionList struct {
 	Stdout, Stderr     io.Writer
 	TablespaceFilePath string
 	OldOptions         string
+	CreateTemplate     bool
+	TemplateDataDir    string
+	TemplatePort       int
 }
 
 // newOptionList returns an optionList with all of the provided Options applied.
