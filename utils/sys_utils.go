@@ -5,6 +5,7 @@ package utils
 
 import (
 	"database/sql"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -100,6 +101,10 @@ func GetLogDir() (string, error) {
 
 func GetTablespaceDir() string {
 	return filepath.Join(GetStateDir(), "tablespaces")
+}
+
+func GetTemplateDir(content int32) string {
+	return filepath.Join(GetStateDir(), "templates", fmt.Sprint(content))
 }
 
 // Returns path to a JSON file, and if one does not exist it creates an empty
