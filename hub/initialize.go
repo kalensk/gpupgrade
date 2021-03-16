@@ -144,12 +144,6 @@ func (s *Server) InitializeCreateCluster(in *idl.InitializeCreateClusterRequest,
 		return nil
 	})
 
-	st.Run(idl.Substep_BACKUP_TARGET_MASTER, func(stream step.OutStreams) error {
-		sourceDir := s.Target.MasterDataDir()
-		targetDir := filepath.Join(s.StateDir, originalMasterBackupName)
-		return RsyncMasterDataDir(stream, sourceDir, targetDir)
-	})
-
 	st.AlwaysRun(idl.Substep_CHECK_UPGRADE, func(stream step.OutStreams) error {
 		conns, err := s.AgentConns()
 
@@ -158,6 +152,70 @@ func (s *Server) InitializeCreateCluster(in *idl.InitializeCreateClusterRequest,
 		}
 
 		return s.CheckUpgrade(stream, conns)
+	})
+
+	// FIXME:
+	/*
+		After execute to allow customer to test their upgraded primaries. We have two choices:
+
+		1) add mirrors "manually"
+		[Needs to be confirmed/prototype]. This includes creating mirror directories, copying upgraded target master to mirror directory, and updating gp_segment_configuration.
+		This way is the preferred method.
+
+		1) init target cluster with mirrors
+		gpupgrade currently does not do this.
+		This would entail manually editing gp_segment_configuration and marking mirrors as down and then starting the target cluster.
+	*/
+
+	// The mirrors have not yet been upgraded which occurs in finalize. To
+	// allow customers to test out the upgraded cluster on the primaries, we
+	// mark the mirrors as down and start the target cluster.
+	st.RunInternalSubstep(func() error {
+		return s.Target.StartMasterOnly(step.DevNullStream)
+	})
+
+	st.RunInternalSubstep(func() (err error) {
+		options := []connURI.Option{
+			connURI.ToTarget(),
+			connURI.Port(s.Target.MasterPort()),
+			connURI.UtilityMode(),
+			connURI.AllowSystemTableMods(),
+		}
+
+		uri := s.Connection.URI(options...)
+		connection, err := sql.Open("pgx", uri)
+		if err != nil {
+			return xerrors.Errorf("connecting to master on port %d in utility mode with connection URI '%s': %w", s.Target.MasterPort(), uri, err)
+		}
+
+		defer func() {
+			closeErr := connection.Close()
+			if closeErr != nil {
+				closeErr = xerrors.Errorf("closing connection to target master: %w", closeErr)
+				err = errorlist.Append(err, closeErr)
+			}
+		}()
+
+		_, err = connection.Exec(`UPDATE gp_segment_configuration SET status = 'd' where preferred_role = 'm';`)
+		if err != nil {
+			return xerrors.Errorf("set mirror status to down: %w", err)
+		}
+
+		return nil
+	})
+
+	st.RunInternalSubstep(func() error {
+		return s.Target.StopMasterOnly(step.DevNullStream)
+	})
+
+	// Other option is to mark mirrors as down during execute after upgrading the master....
+	// Needs to be after marking the mirrors as down, so that when starting the
+	// target cluster in execute does not bring up the mirrors.
+	// that is upgrading the master will wipe the catalog changes from us marking the mirrors as down.
+	st.Run(idl.Substep_BACKUP_TARGET_MASTER, func(stream step.OutStreams) error {
+		sourceDir := s.Target.MasterDataDir()
+		targetDir := filepath.Join(s.StateDir, originalMasterBackupName)
+		return RsyncMasterDataDir(stream, sourceDir, targetDir)
 	})
 
 	message := &idl.Message{Contents: &idl.Message_Response{Response: &idl.Response{Contents: &idl.Response_InitializeResponse{

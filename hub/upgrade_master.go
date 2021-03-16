@@ -46,10 +46,12 @@ func UpgradeMaster(args UpgradeMasterArgs) error {
 		return err
 	}
 
-	sourceDir := filepath.Join(args.StateDir, originalMasterBackupName)
-	err = RsyncMasterDataDir(args.Stream, sourceDir, args.Target.MasterDataDir())
-	if err != nil {
-		return err
+	if !args.CheckOnly {
+		sourceDir := filepath.Join(args.StateDir, originalMasterBackupName)
+		err = RsyncMasterDataDir(args.Stream, sourceDir, args.Target.MasterDataDir())
+		if err != nil {
+			return err
+		}
 	}
 
 	pair := upgrade.SegmentPair{
