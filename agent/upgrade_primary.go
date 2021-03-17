@@ -45,7 +45,12 @@ func upgradeSegment(segment Segment, request *idl.UpgradePrimariesRequest, host 
 
 	err = backupTemplate(segment)
 	if err != nil {
-		return xerrors.Errorf("backup primary template on host %s with content %d: %w", host, segment.Content, err)
+		return xerrors.Errorf("backup primary template to state dir on host %s with content %d: %w", host, segment.Content, err)
+	}
+
+	err = backupTemplateToPrimaryWorkingDir(segment)
+	if err != nil {
+		return xerrors.Errorf("backup primary template to working dir on host %s with content %d: %w", host, segment.Content, err)
 	}
 
 	err = backupPrimaryTablespaces(segment)
@@ -102,11 +107,12 @@ func createTemplate(segment Segment, request *idl.UpgradePrimariesRequest) error
 		options = append(options, upgrade.WithLinkMode())
 	}
 
+	// TODO: remove SegmentPair and targetVersion parameters in favor of idl.pgOptions
 	return upgrade.Run(segmentPair, semver.MustParse(request.TargetVersion), options...)
 }
 
 func backupTemplate(segment Segment) error {
-	if err := os.MkdirAll(utils.GetTemplateDir(segment.GetContent()), 0700); err != nil {
+	if err := os.MkdirAll(utils.GetTemplateBackupDir(segment.GetContent()), 0700); err != nil {
 		return err
 	}
 
@@ -115,7 +121,24 @@ func backupTemplate(segment Segment) error {
 	// or elsewhere we can exclude files then.
 	options := []rsync.Option{
 		rsync.WithSources(segment.GetTargetDataDir() + string(os.PathSeparator)),
-		rsync.WithDestination(utils.GetTemplateDir(segment.GetContent())),
+		rsync.WithDestination(utils.GetTemplateBackupDir(segment.GetContent())),
+		rsync.WithOptions("--archive", "--delete"),
+	}
+
+	return rsync.Rsync(options...)
+}
+
+func backupTemplateToPrimaryWorkingDir(segment Segment) error {
+	if err := os.MkdirAll(utils.GetTemplateWorkingDir(segment.GetContent()), 0700); err != nil {
+		return err
+	}
+
+	// Note: No need to exclude any files as we are backing everything up to
+	// the state directory. When copying it from the sate directory to the mirror,
+	// or elsewhere we can exclude files then.
+	options := []rsync.Option{
+		rsync.WithSources(segment.GetTargetDataDir() + string(os.PathSeparator)),
+		rsync.WithDestination(utils.GetTemplateWorkingDir(segment.GetContent())),
 		rsync.WithOptions("--archive", "--delete"),
 	}
 
@@ -170,7 +193,7 @@ func linkTablespacesToTemplate(segment Segment) error {
 		// This step appears to not be needed since we rysnc with --archive which preserves the symlinks...
 		// Probably best to leave it so that it is symmetrical to the linkTablespacesToPrimary function.
 		targetDir := utils.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
-		symLinkName := fmt.Sprintf("%s/pg_tblspc/%s", utils.GetTemplateDir(segment.GetContent()), strconv.Itoa(int(oid)))
+		symLinkName := fmt.Sprintf("%s/pg_tblspc/%s", utils.GetTemplateWorkingDir(segment.GetContent()), strconv.Itoa(int(oid)))
 		if err := ReCreateSymLink(targetDir, symLinkName); err != nil {
 			return xerrors.Errorf("recreate symbolic link: %w", err)
 		}
@@ -245,7 +268,7 @@ func performUpgrade(segment Segment, request *idl.UpgradePrimariesRequest) error
 		// --check mode. There is no test in pg_upgrade which depends on the
 		// existence of this file.
 		options = append(options, upgrade.WithTablespaceFile(request.TablespacesMappingFilePath))
-		options = append(options, upgrade.TemplateDataDir(utils.GetTemplateDir(segment.GetContent())))
+		options = append(options, upgrade.TemplateDataDir(utils.GetTemplateWorkingDir(segment.GetContent())))
 		options = append(options, upgrade.TemplatePort(int(segment.GetTargetPort())))
 	}
 
@@ -253,6 +276,7 @@ func performUpgrade(segment Segment, request *idl.UpgradePrimariesRequest) error
 		options = append(options, upgrade.WithLinkMode())
 	}
 
+	// TODO: remove SegmentPair and targetVersion parameters in favor of idl.pgOptions
 	return upgrade.Run(segmentPair, semver.MustParse(request.TargetVersion), options...)
 }
 
@@ -266,7 +290,7 @@ func linkTablespacesToPrimary(segment Segment) error {
 			continue
 		}
 
-		templateTablespace := fmt.Sprintf("%s/pg_tblspc/%s", utils.GetTemplateDir(segment.GetContent()), strconv.Itoa(int(oid)))
+		templateTablespace := fmt.Sprintf("%s/pg_tblspc/%s", utils.GetTemplateWorkingDir(segment.GetContent()), strconv.Itoa(int(oid)))
 		if err := os.Remove(templateTablespace); err != nil {
 			return err
 		}

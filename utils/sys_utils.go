@@ -125,8 +125,16 @@ func GetTablespaceLocationForDbId(t *idl.TablespaceInfo, dbId int) string {
 	return filepath.Join(t.Location, strconv.Itoa(dbId))
 }
 
-func GetTemplateDir(content int32) string {
+func GetTemplateBackupDir(content int32) string {
+	return filepath.Join(GetStateDir(), "backups", fmt.Sprintf("template%d", content))
+}
+
+func GetTemplateWorkingDir(content int32) string {
 	return filepath.Join(GetStateDir(), "templates", fmt.Sprint(content))
+}
+
+func GetBackupMirrorDir(content int32) string {
+	return filepath.Join(GetStateDir(), "backups", fmt.Sprintf("m%d", content))
 }
 
 // Returns path to a JSON file, and if one does not exist it creates an empty

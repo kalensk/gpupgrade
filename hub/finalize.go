@@ -46,6 +46,20 @@ func (s *Server) Finalize(_ *idl.FinalizeRequest, stream idl.CliToHub_FinalizeSe
 		return nil
 	})
 
+	// In link mode, need to update the mirrors in-place before updating the data
+	// directories which deletes the source mirror directories.
+	// TODO: Do we want to upgrade the mirrors in-place before or after updating the catalog, and
+	// updating the data directories...?!?
+	// TODO: UpdateCatalogAndClusterConfig() only updates the primaries, but for link mode
+	// in-place upgrade the mirrors also need to be upgraded.
+	// TODO: UpdateDataDirectories() does not rename the target mirror directories when in link mode...
+	// That needs to be updated.
+	if s.Source.HasMirrors() { //&& s.UseLinkMode {
+		st.Run(idl.Substep_UPGRADE_MIRRORS, func(streams step.OutStreams) error {
+			return s.upgradeMirrors()
+		})
+	}
+
 	st.Run(idl.Substep_UPDATE_TARGET_CATALOG_AND_CLUSTER_CONFIG, func(streams step.OutStreams) error {
 		return s.UpdateCatalogAndClusterConfig(streams)
 	})
@@ -92,7 +106,7 @@ func (s *Server) Finalize(_ *idl.FinalizeRequest, stream idl.CliToHub_FinalizeSe
 
 	// todo: we don't currently have a way to output nothing to the UI when there are no mirrors.
 	// If we did, this check would actually be in `UpgradeMirrors`
-	if s.Source.HasMirrors() {
+	if s.Source.HasMirrors() && !s.UseLinkMode {
 		st.Run(idl.Substep_UPGRADE_MIRRORS, func(streams step.OutStreams) error {
 			// TODO: once the temporary mirror upgrade is fixed, switch to using
 			// the TargetInitializeConfig's temporary assignments, and move this
