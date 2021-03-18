@@ -13,7 +13,6 @@ import (
 	"github.com/blang/semver/v4"
 	"golang.org/x/xerrors"
 
-	"github.com/greenplum-db/gpupgrade/greenplum"
 	"github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/upgrade"
 	"github.com/greenplum-db/gpupgrade/utils"
@@ -170,7 +169,7 @@ func linkTablespacesToTemplate(segment Segment) error {
 
 		// This step appears to not be needed since we rysnc with --archive which preserves the symlinks...
 		// Probably best to leave it so that it is symmetrical to the linkTablespacesToPrimary function.
-		targetDir := greenplum.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
+		targetDir := utils.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
 		symLinkName := fmt.Sprintf("%s/pg_tblspc/%s", utils.GetTemplateDir(segment.GetContent()), strconv.Itoa(int(oid)))
 		if err := ReCreateSymLink(targetDir, symLinkName); err != nil {
 			return xerrors.Errorf("recreate symbolic link: %w", err)
@@ -272,7 +271,7 @@ func linkTablespacesToPrimary(segment Segment) error {
 			return err
 		}
 
-		targetDir := greenplum.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
+		targetDir := utils.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
 		symLinkName := fmt.Sprintf("%s/pg_tblspc/%s", segment.GetTargetDataDir(), strconv.Itoa(int(oid)))
 		if err := ReCreateSymLink(targetDir, symLinkName); err != nil {
 			return xerrors.Errorf("recreate symbolic link: %w", err)
@@ -306,8 +305,8 @@ func RestoreMasterTablespaces(request *idl.UpgradePrimariesRequest, segment Segm
 			continue
 		}
 
-		targetDir := greenplum.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
-		sourceDir := greenplum.GetMasterTablespaceLocation(filepath.Dir(request.TablespacesMappingFilePath), int(oid))
+		targetDir := utils.GetTablespaceLocationForDbId(tablespace, int(segment.DBID))
+		sourceDir := utils.GetMasterTablespaceLocation(filepath.Dir(request.TablespacesMappingFilePath), int(oid))
 
 		options := []rsync.Option{
 			rsync.WithSources(sourceDir + string(os.PathSeparator)),

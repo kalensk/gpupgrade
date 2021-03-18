@@ -11,16 +11,20 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/google/renameio"
 
+	"github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils/errorlist"
 )
 
 var (
 	System = InitializeSystemFunctions()
 )
+
+const MasterDbid = 1
 
 /*
  * SystemFunctions holds function pointers for built-in functions that will need
@@ -101,6 +105,14 @@ func GetLogDir() (string, error) {
 
 func GetTablespaceDir() string {
 	return filepath.Join(GetStateDir(), "tablespaces")
+}
+
+func GetMasterTablespaceLocation(basePath string, oid int) string {
+	return filepath.Join(basePath, strconv.Itoa(oid), strconv.Itoa(MasterDbid))
+}
+
+func GetTablespaceLocationForDbId(t *idl.TablespaceInfo, dbId int) string {
+	return filepath.Join(t.Location, strconv.Itoa(dbId))
 }
 
 func GetTemplateDir(content int32) string {

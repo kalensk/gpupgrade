@@ -6,14 +6,12 @@ package greenplum
 import (
 	"encoding/csv"
 	"io"
-	"path/filepath"
 	"strconv"
 
 	"github.com/greenplum-db/gp-common-go-libs/dbconn"
 	"github.com/pkg/errors"
 	"golang.org/x/xerrors"
 
-	"github.com/greenplum-db/gpupgrade/idl"
 	"github.com/greenplum-db/gpupgrade/utils"
 )
 
@@ -66,14 +64,6 @@ func (t Tablespaces) GetMasterTablespaces() SegmentTablespaces {
 
 func (t *TablespaceInfo) IsUserDefined() bool {
 	return t.UserDefined == 1
-}
-
-func GetTablespaceLocationForDbId(t *idl.TablespaceInfo, dbId int) string {
-	return filepath.Join(t.Location, strconv.Itoa(dbId))
-}
-
-func GetMasterTablespaceLocation(basePath string, oid int) string {
-	return filepath.Join(basePath, strconv.Itoa(oid), strconv.Itoa(MasterDbid))
 }
 
 func GetTablespaceTuples(connection *dbconn.DBConn) (TablespaceTuples, error) {
