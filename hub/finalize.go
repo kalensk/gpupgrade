@@ -106,6 +106,15 @@ func (s *Server) Finalize(_ *idl.FinalizeRequest, stream idl.CliToHub_FinalizeSe
 		})
 	}
 
+	// See comment in initialize.go, we mark the mirrors as down and thus need to
+	// bring them up again. This also replays anything that possibly has occurred
+	// on the primaries between execute and finalize (which should be nothing).
+	if s.UseLinkMode {
+		st.RunInternalSubstep(func() error {
+			return Recoverseg(step.DevNullStream, s.Target, s.UseHbaHostnames)
+		})
+	}
+
 	// FIXME: archiveDir is not set unless we actually run this substep; it must be persisted.
 	var archiveDir string
 	st.Run(idl.Substep_ARCHIVE_LOG_DIRECTORIES, func(_ step.OutStreams) error {
