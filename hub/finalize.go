@@ -58,6 +58,17 @@ func (s *Server) Finalize(_ *idl.FinalizeRequest, stream idl.CliToHub_FinalizeSe
 		})
 	}
 
+	// TODO: We update the ports and datadir. Does the pg_control file that we
+	// restore on the mirrors no longer "work" since it has the "old" ports and
+	// datadirs? If so, how can we get around that. During recoverseg later on
+	// the mirror logs show the following error:
+	//
+	// seg0,,,,,"ERROR","XX000","could not connect to the primary server: could not connect to server: Connection refused
+	// Is the server running on host ""kkrempely-a01.vmware.com"" (::1) and accepting
+	// TCP/IP connections on port 50433?
+	// could not connect to server: Connection refused
+	// Is the server running on host ""kkrempely-a01.vmware.com"" (127.0.0.1) and accepting
+	// TCP/IP connections on port 50433?
 	st.Run(idl.Substep_UPDATE_TARGET_CATALOG_AND_CLUSTER_CONFIG, func(streams step.OutStreams) error {
 		return s.UpdateCatalogAndClusterConfig(streams)
 	})
@@ -115,6 +126,20 @@ func (s *Server) Finalize(_ *idl.FinalizeRequest, stream idl.CliToHub_FinalizeSe
 
 			return UpgradeMirrors(s.StateDir, s.Connection, s.Target.MasterPort(),
 				s.Source.SelectSegments(mirrors), greenplum.NewRunner(s.Target, streams), s.UseHbaHostnames)
+		})
+	}
+
+	// Since in link mode we initialize the target cluster with mirrors rather
+	// than "manually" adding them we mark the mirrors down to prevent drift
+	// between the primaries. Thus, run gprecoverseg to bring them up and replay
+	// any potential changes that occurred on the primary between execute and
+	// finalize which should be nothing.
+
+	// Note: Need to run gprecoverseg after adding the standby otherwise it
+	// fails with "Invalid GpArray ... Standby: Not Configured".
+	if s.UseLinkMode {
+		st.Run(idl.Substep_RECOVERSEG_TARGET_CLUSTER, func(streams step.OutStreams) error {
+			return Recoverseg(streams, s.Target, s.UseHbaHostnames)
 		})
 	}
 

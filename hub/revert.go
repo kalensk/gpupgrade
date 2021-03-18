@@ -144,7 +144,11 @@ func (s *Server) Revert(_ *idl.RevertRequest, stream idl.CliToHub_RevertServer) 
 		return nil
 	})
 
-	if handleMirrorStartupFailure {
+	// Restoring the mirrors is needed in copy mode on 5X since the source cluster
+	// is left in a bad state after execute. This is because running pg_upgrade on
+	// a primary results in a checkpoint that does not get replicated on the mirror.
+	// Thus, when the mirror is started it panics and a gprecoverseg or rsync is needed.
+	if handleMirrorStartupFailure && s.Source.Version.Before("6") {
 		st.Run(idl.Substep_RECOVERSEG_SOURCE_CLUSTER, func(streams step.OutStreams) error {
 			return Recoverseg(streams, s.Source, s.UseHbaHostnames)
 		})
