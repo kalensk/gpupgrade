@@ -84,15 +84,8 @@ func RsyncMasterAndPrimariesTablespaces(stream step.OutStreams, agentConns []*Co
 	return err
 }
 
-// Restoring the mirrors is needed in copy mode on 5X since the source cluster
-// is left in a bad state after execute. This is because running pg_upgrade on
-// a primary results in a checkpoint that does not get replicated on the mirror.
-// Thus, when the mirror is started it panics and a gprecoverseg or rsync is needed.
+// TODO: Consider moving to a common location since it is used by both restore and finalize.
 func Recoverseg(stream step.OutStreams, cluster *greenplum.Cluster, useHbaHostnames bool) error {
-	if cluster.Version.AtLeast("6") {
-		return nil
-	}
-
 	hbaHostnames := ""
 	if useHbaHostnames {
 		hbaHostnames = "--hba-hostnames"
