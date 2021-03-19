@@ -122,23 +122,20 @@ func (c *Cluster) HasAllMirrorsAndStandby() bool {
 	return true
 }
 
-// XXX This does not provide mirror hostnames yet.
-func (c *Cluster) GetHostnames() []string {
-	hostnameMap := make(map[string]bool)
-	for _, seg := range c.Primaries {
-		hostnameMap[seg.Hostname] = true
-	}
-	hostnames := make([]string, 0)
-	for host := range hostnameMap {
-		hostnames = append(hostnames, host)
-	}
-	return hostnames
+func (c *Cluster) PrimaryHostnames() []string {
+	return hostnames(c.Primaries)
 }
 
-func (c *Cluster) PrimaryHostnames() []string {
+func (c *Cluster) MirrorHostnames() []string {
+	return hostnames(c.Mirrors)
+}
+
+// hostnames is a helper that takes in all mirrors or primaries and returns a
+// list of hostnames not including the master or standby.
+func hostnames(segs map[int]SegConfig) []string {
 	hostnames := make(map[string]bool)
-	for _, seg := range c.Primaries {
-		// Ignore the master.
+	for _, seg := range segs {
+		// Ignore the standby
 		if seg.ContentID >= 0 {
 			hostnames[seg.Hostname] = true
 		}
