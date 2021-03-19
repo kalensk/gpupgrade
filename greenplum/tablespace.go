@@ -90,6 +90,22 @@ func GetTablespaceTuples(connection *dbconn.DBConn) (TablespaceTuples, error) {
 	return results, nil
 }
 
+func GetProtoTablespaceMap(tablespaces Tablespaces, dbId int) map[int32]*idl.TablespaceInfo {
+	if tablespaces == nil {
+		return nil
+	}
+
+	segTablespaces := tablespaces[dbId]
+	t := make(map[int32]*idl.TablespaceInfo)
+	for tablespaceOid, tablespace := range segTablespaces {
+		t[int32(tablespaceOid)] = &idl.TablespaceInfo{
+			Location:    tablespace.Location,
+			UserDefined: tablespace.IsUserDefined()}
+	}
+
+	return t
+}
+
 // convert the database tablespace query result to internal structure
 func NewTablespaces(tuples TablespaceTuples) Tablespaces {
 	clusterTablespaceMap := make(Tablespaces)
