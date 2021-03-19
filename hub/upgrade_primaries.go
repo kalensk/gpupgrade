@@ -93,7 +93,7 @@ func (s *Server) GetDataDirPairs() (map[string][]*idl.DataDirPair, error) {
 			TargetPort:    int32(targetSeg.Port),
 			Content:       int32(contentID),
 			DBID:          int32(sourceSeg.DbID),
-			Tablespaces:   getProtoTablespaceMap(s.Tablespaces, targetSeg.DbID),
+			Tablespaces:   greenplum.GetProtoTablespaceMap(s.Tablespaces, targetSeg.DbID),
 		}
 
 		dataDirPairMap[sourceSeg.Hostname] = append(dataDirPairMap[sourceSeg.Hostname], dataPair)
@@ -120,20 +120,4 @@ func (i *InvalidClusterError) Error() string {
 
 func (i *InvalidClusterError) Is(err error) bool {
 	return err == ErrInvalidCluster
-}
-
-func getProtoTablespaceMap(tablespaces greenplum.Tablespaces, dbId int) map[int32]*idl.TablespaceInfo {
-	if tablespaces == nil {
-		return nil
-	}
-
-	segTablespaces := tablespaces[dbId]
-	t := make(map[int32]*idl.TablespaceInfo)
-	for tablespaceOid, tablespace := range segTablespaces {
-		t[int32(tablespaceOid)] = &idl.TablespaceInfo{
-			Location:    tablespace.Location,
-			UserDefined: tablespace.IsUserDefined()}
-	}
-
-	return t
 }
