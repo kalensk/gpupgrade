@@ -28,7 +28,7 @@ func upgradeSegment(segment Segment, request *idl.UpgradePrimariesRequest, host 
 			host, segment.Content, err)
 	}
 
-	err = RestoreTablespaces(request, segment)
+	err = RestoreMasterTablespaces(request, segment)
 	if err != nil {
 		return xerrors.Errorf("restore tablespace on host %s for content id %d: %w",
 			host, segment.Content, err)
@@ -99,11 +99,10 @@ func restoreBackup(request *idl.UpgradePrimariesRequest, segment Segment) error 
 	return rsync.Rsync(options...)
 }
 
-func RestoreTablespaces(request *idl.UpgradePrimariesRequest, segment Segment) error {
+func RestoreMasterTablespaces(request *idl.UpgradePrimariesRequest, segment Segment) error {
 	if request.CheckOnly {
 		return nil
 	}
-
 	for oid, tablespace := range segment.Tablespaces {
 		if !tablespace.GetUserDefined() {
 			continue
