@@ -72,7 +72,7 @@ func TestRestoreTablespaces(t *testing.T) {
 		rsync.SetRsyncCommand(exectest.NewCommandWithVerifier(agent.Success, func(name string, args ...string) {
 			expected := "rsync"
 			if name != expected {
-				t.Errorf("RestoreTablespaces() invoked %q, want %q", name, expected)
+				t.Errorf("RestoreMasterTablespaces() invoked %q, want %q", name, expected)
 			}
 
 			// will use for validation later
@@ -117,7 +117,7 @@ func TestRestoreTablespaces(t *testing.T) {
 			return nil
 		}
 
-		err := agent.RestoreTablespaces(request, segment)
+		err := agent.RestoreMasterTablespaces(request, segment)
 		if err != nil {
 			t.Errorf("got %+v, want nil", err)
 		}
@@ -145,7 +145,7 @@ func TestRestoreTablespaces(t *testing.T) {
 		rsync.SetRsyncCommand(exectest.NewCommand(agent.FailedMain))
 		defer func() { rsync.SetRsyncCommand(nil) }()
 
-		err := agent.RestoreTablespaces(request, segment)
+		err := agent.RestoreMasterTablespaces(request, segment)
 
 		if err == nil {
 			t.Error("expected Rsync() to fail")
@@ -174,7 +174,7 @@ func TestRestoreTablespaces(t *testing.T) {
 		rsync.SetRsyncCommand(exectest.NewCommand(agent.Success))
 		defer func() { rsync.SetRsyncCommand(nil) }()
 
-		err := agent.RestoreTablespaces(request, segment)
+		err := agent.RestoreMasterTablespaces(request, segment)
 		if err == nil {
 			t.Error("expected ReCreateSymLink() to fail")
 		}
