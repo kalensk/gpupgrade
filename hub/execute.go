@@ -20,7 +20,7 @@ import (
 const executeMasterBackupName = "upgraded-master.bak"
 
 func (s *Server) Execute(request *idl.ExecuteRequest, stream idl.CliToHub_ExecuteServer) (err error) {
-	upgradedMasterBackupDir := filepath.Join(s.StateDir, executeMasterBackupName)
+	upgradedMasterBackupDir := filepath.Join(s.StateDir, executeMasterBackupName) // TODO: This should be a helper function and under the "backups" directory.
 
 	st, err := step.Begin(s.StateDir, idl.Step_EXECUTE, stream)
 	if err != nil {
@@ -65,6 +65,7 @@ func (s *Server) Execute(request *idl.ExecuteRequest, stream idl.CliToHub_Execut
 			return err
 		}
 
+		// TODO: Create a helper for this path such as GetBackupTablespaceDirForCoordinator()
 		err = s.CopyMasterTablespaces(streams, utils.GetTablespaceDir()+string(os.PathSeparator))
 		if err != nil {
 			return err

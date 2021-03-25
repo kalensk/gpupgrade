@@ -5,6 +5,7 @@ package utils
 
 import (
 	"database/sql"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -102,16 +103,35 @@ func GetLogDir() (string, error) {
 	return logDir, nil
 }
 
+// TODO: This should be under "backups"
 func GetTablespaceDir() string {
 	return filepath.Join(GetStateDir(), "tablespaces")
 }
 
+// TODO: This should be under "backups"
 func GetMasterTablespaceLocation(basePath string, oid int) string {
 	return filepath.Join(basePath, strconv.Itoa(oid), strconv.Itoa(MasterDbid))
 }
 
 func GetTablespaceLocationForDbId(t *idl.TablespaceInfo, dbId int) string {
 	return filepath.Join(t.Location, strconv.Itoa(dbId))
+}
+
+func GetBackupTablespaceDirForPrimary(content int32) string {
+	// TODO: This should be under "backups"
+	return filepath.Join(GetStateDir(), "tablespaces", fmt.Sprintf("p%d", content))
+}
+
+func GetTemplateBackupDir(content int32) string {
+	return filepath.Join(GetStateDir(), "backups", fmt.Sprintf("template%d", content))
+}
+
+func GetTemplateWorkingDir(content int32) string {
+	return filepath.Join(GetStateDir(), "templates", fmt.Sprint(content))
+}
+
+func GetBackupPrimaryDir(content int32) string {
+	return filepath.Join(GetStateDir(), "backups", fmt.Sprintf("p%d", content))
 }
 
 // Returns path to a JSON file, and if one does not exist it creates an empty

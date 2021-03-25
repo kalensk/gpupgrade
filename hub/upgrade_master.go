@@ -46,7 +46,7 @@ func UpgradeMaster(args UpgradeMasterArgs) error {
 		return err
 	}
 
-	sourceDir := filepath.Join(args.StateDir, originalMasterBackupName)
+	sourceDir := filepath.Join(args.StateDir, originalMasterBackupName) // TODO: This should be a helper function and under the "backups" directory.
 	err = RsyncMasterDataDir(args.Stream, sourceDir, args.Target.MasterDataDir())
 	if err != nil {
 		return err
