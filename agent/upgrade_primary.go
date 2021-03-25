@@ -20,6 +20,7 @@ import (
 )
 
 func upgradeSegment(segment Segment, request *idl.UpgradePrimariesRequest, host string) error {
+
 	err := restoreBackup(request, segment)
 
 	if err != nil {
