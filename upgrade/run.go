@@ -36,6 +36,8 @@ type SegmentPair struct {
 // Run executes pg_upgrade for the given pair of Segments. By default, a
 // standard master upgrade is performed; this can be changed by passing various
 // Options.
+
+// TODO: remove SegmentPair and targetVersion parameters in favor of idl.pgOptions
 func Run(p SegmentPair, targetVersion semver.Version, options ...Option) error {
 	opts := newOptionList(options)
 

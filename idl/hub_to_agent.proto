@@ -10,6 +10,7 @@ import "cli_to_hub.proto";
 service Agent {
   rpc CheckDiskSpace (CheckSegmentDiskSpaceRequest) returns (CheckDiskSpaceReply) {}
   rpc UpgradePrimaries (UpgradePrimariesRequest) returns (UpgradePrimariesReply) {}
+  rpc UpgradeMirrors (UpgradeMirrorsRequest) returns (UpgradeMirrorsReply) {}
   rpc RenameDirectories (RenameDirectoriesRequest) returns (RenameDirectoriesReply) {}
   rpc StopAgent (StopAgentRequest) returns (StopAgentReply) {}
   rpc DeleteDataDirectories (DeleteDataDirectoriesRequest) returns (DeleteDataDirectoriesReply) {}
@@ -27,6 +28,31 @@ message TablespaceInfo {
   string Location = 4;
   bool UserDefined = 5;
 }
+
+message UpgradeMirrorsRequest {
+  repeated pgOptions PgOptions = 1;
+  map<int32, TablespaceInfo> Tablespaces = 2;
+}
+
+// Includes options to upgrade.Run() and pg_upgrade
+message pgOptions {
+  string PrimaryHost = 1;
+  string TargetVersion = 2;
+  bool CheckOnly = 3;
+  bool UseLinkMode = 4;
+  string TablespacesMappingFilePath = 5;
+  map<int32, TablespaceInfo> Tablespaces = 6;
+  string SourceBinDir = 7;
+  string SourceDataDir = 8;
+  int32  SourcePort = 9;
+  string TargetBinDir = 10;
+  string TargetDataDir = 11;
+  int32  TargetPort = 12;
+  int32  Content = 13;
+  int32  DBID = 14;
+}
+
+message UpgradeMirrorsReply {}
 
 message UpgradePrimariesRequest {
     string SourceBinDir = 1;

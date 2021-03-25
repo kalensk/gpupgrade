@@ -75,6 +75,26 @@ func (mr *MockAgentClientMockRecorder) UpgradePrimaries(ctx, in interface{}, opt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradePrimaries", reflect.TypeOf((*MockAgentClient)(nil).UpgradePrimaries), varargs...)
 }
 
+// UpgradeMirrors mocks base method
+func (m *MockAgentClient) UpgradeMirrors(ctx context.Context, in *idl.UpgradeMirrorsRequest, opts ...grpc.CallOption) (*idl.UpgradeMirrorsReply, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpgradeMirrors", varargs...)
+	ret0, _ := ret[0].(*idl.UpgradeMirrorsReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpgradeMirrors indicates an expected call of UpgradeMirrors
+func (mr *MockAgentClientMockRecorder) UpgradeMirrors(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeMirrors", reflect.TypeOf((*MockAgentClient)(nil).UpgradeMirrors), varargs...)
+}
+
 // RenameDirectories mocks base method
 func (m *MockAgentClient) RenameDirectories(ctx context.Context, in *idl.RenameDirectoriesRequest, opts ...grpc.CallOption) (*idl.RenameDirectoriesReply, error) {
 	m.ctrl.T.Helper()
@@ -326,6 +346,21 @@ func (m *MockAgentServer) UpgradePrimaries(arg0 context.Context, arg1 *idl.Upgra
 func (mr *MockAgentServerMockRecorder) UpgradePrimaries(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradePrimaries", reflect.TypeOf((*MockAgentServer)(nil).UpgradePrimaries), arg0, arg1)
+}
+
+// UpgradeMirrors mocks base method
+func (m *MockAgentServer) UpgradeMirrors(arg0 context.Context, arg1 *idl.UpgradeMirrorsRequest) (*idl.UpgradeMirrorsReply, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpgradeMirrors", arg0, arg1)
+	ret0, _ := ret[0].(*idl.UpgradeMirrorsReply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpgradeMirrors indicates an expected call of UpgradeMirrors
+func (mr *MockAgentServerMockRecorder) UpgradeMirrors(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeMirrors", reflect.TypeOf((*MockAgentServer)(nil).UpgradeMirrors), arg0, arg1)
 }
 
 // RenameDirectories mocks base method
