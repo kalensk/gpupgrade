@@ -65,6 +65,7 @@ func (s *Server) Execute(request *idl.ExecuteRequest, stream idl.CliToHub_Execut
 			return err
 		}
 
+		// TODO: Create a helper for this path such as GetBackupTablespaceDirForCoordinator()
 		err = s.CopyMasterTablespaces(streams, utils.GetTablespaceDir()+string(os.PathSeparator))
 		if err != nil {
 			return err

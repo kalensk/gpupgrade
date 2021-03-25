@@ -104,9 +104,19 @@ func GetLogDir() (string, error) {
 }
 
 func GetTablespaceDir() string {
+	// TODO: This should be under "backups"
 	return filepath.Join(GetStateDir(), "tablespaces")
 }
 
+func GetBackupTablespaceDirForPrimary(content int32) string {
+	// TODO: This should be under "backups"
+	return filepath.Join(GetStateDir(), "tablespaces", fmt.Sprintf("p%d", content))
+}
+
+// TODO: Replace below with...
+// func GetBackupTablespaceDirForCoordinator() string {
+// 	return filepath.Join(GetStateDir(), "backups", "tablespaces", "c-1", strconv.Itoa(oid), strconv.Itoa(MasterDbid)))
+// }
 func GetMasterTablespaceLocation(basePath string, oid int) string {
 	return filepath.Join(basePath, strconv.Itoa(oid), strconv.Itoa(MasterDbid))
 }
