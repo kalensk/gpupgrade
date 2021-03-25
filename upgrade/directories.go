@@ -43,8 +43,19 @@ func pgUpgradeDirectory(stateDir string) string {
 // pgUpgradeDirectory that is to be used for pg_upgrade state for a given
 // segment. Like pgUpgradeDirectory, it does not ensure that the directory
 // exists.
+// TODO: Note now that we do in-place mirror upgrades "content" is not unique
+// enough as this will cause the same working directory to be used for both
+// primary and mirror upgrades which is not good.
 func SegmentWorkingDirectory(stateDir string, contentID int) string {
 	return filepath.Join(pgUpgradeDirectory(stateDir), fmt.Sprintf("seg%d", contentID))
+}
+
+// depreciate SegmentWorkingDirectory() in favor of this function
+// TODO: Note now that we do in-place mirror upgrades "content" is not unique
+// enough as this will cause the same working directory to be used for both
+// primary and mirror upgrades which is not good.
+func GetSegmentWorkingDir(dbid int32) string {
+	return filepath.Join(pgUpgradeDirectory(utils.GetStateDir()), fmt.Sprintf("dbid%d", dbid))
 }
 
 // MasterWorkingDirectory is a convenience method equivalent to
