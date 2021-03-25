@@ -344,8 +344,8 @@ func (s *Server) closeAgentConns() {
 type InitializeConfig struct {
 	Standby   greenplum.SegConfig
 	Master    greenplum.SegConfig
-	Primaries []greenplum.SegConfig
-	Mirrors   []greenplum.SegConfig
+	Primaries greenplum.SegConfigs
+	Mirrors   greenplum.SegConfigs
 }
 
 // Config contains all the information that will be persisted to/loaded from
