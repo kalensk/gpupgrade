@@ -98,7 +98,6 @@ message ArchiveLogDirectoryReply {}
 message RenameDirectories {
   string Source = 1;
   string Target = 2;
-  bool RenameTarget = 3;
 }
 
 message RenameDirectoriesRequest {

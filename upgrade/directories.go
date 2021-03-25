@@ -104,11 +104,7 @@ func GetArchiveDirectoryName(id ID, t time.Time) string {
 // source to target. For example:
 //   source '/data/dbfast1/demoDataDir0' becomes archive '/data/dbfast1/demoDataDir.123ABC.0.old'
 //   target '/data/dbfast1/demoDataDir.123ABC.0' becomes source '/data/dbfast1/demoDataDir0'
-// When renameTarget is false just the source directory is archived. This is
-// useful in link mode when the mirrors have been deleted to save disk space and
-// will upgraded later to their correct location. Thus, renameTarget is false in
-// link mode when there is only the source directory to archive.
-func ArchiveSource(source, target string, renameTarget bool) error {
+func ArchiveSource(source, target string) error {
 	// Instead of manipulating the source to create the archive we append the
 	// old suffix to the target to achieve the same result.
 	archive := target + OldSuffix
@@ -121,13 +117,8 @@ func ArchiveSource(source, target string, renameTarget bool) error {
 			return err
 		}
 	} else {
+		// TODO: Update message to include the source directory could not also exist since in link mode as we delete it to save space.
 		gplog.Debug("Source directory not found when renaming %q to %q. It was already renamed from a previous run.", source, archive)
-	}
-
-	// In link mode mirrors have been deleted to save disk space, so there is
-	// no target to rename. Only archiving the source is needed.
-	if !renameTarget {
-		return nil
 	}
 
 	if err := renameDataDirectory(target, source); err != nil {
