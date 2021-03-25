@@ -24,12 +24,14 @@ func (s *Server) UpdateDataDirectories() error {
 func UpdateDataDirectories(conf *Config, agentConns []*Connection) error {
 	source := conf.Source.MasterDataDir()
 	target := conf.TargetInitializeConfig.Master.DataDir
-	if err := ArchiveSource(source, target, true); err != nil {
+	if err := ArchiveSource(source, target); err != nil {
 		return xerrors.Errorf("renaming master data directories: %w", err)
 	}
 
-	// in link mode, remove the source mirror and standby data directories; otherwise we create a second copy
-	//  of them for the target cluster. That might take too much disk space.
+	// TODO: Does this still hold when upgrading mirrors in place?
+	// In link mode, remove the source mirror and standby data directories.
+	// Otherwise we create a second copy of them for the target cluster which
+	// might take too much disk space.
 	if conf.UseLinkMode {
 		if err := DeleteMirrorAndStandbyDataDirectories(agentConns, conf.Source); err != nil {
 			return xerrors.Errorf("removing source cluster standby and mirror segment data directories: %w", err)
@@ -40,7 +42,7 @@ func UpdateDataDirectories(conf *Config, agentConns []*Connection) error {
 		}
 	}
 
-	renameMap := getRenameMap(conf.Source, conf.TargetInitializeConfig, conf.UseLinkMode)
+	renameMap := getRenameMap(conf.Source, conf.TargetInitializeConfig, !conf.UseLinkMode)
 	if err := RenameSegmentDataDirs(agentConns, renameMap); err != nil {
 		return xerrors.Errorf("renaming segment data directories: %w", err)
 	}
@@ -51,31 +53,30 @@ func UpdateDataDirectories(conf *Config, agentConns []*Connection) error {
 // getRenameMap() returns a map of host to cluster data directories to be renamed.
 // This includes renaming source to archive, and target to source. In link mode
 // the mirrors have been deleted to save disk space, so exclude them from the map.
-// Since the upgraded mirrors will be added later to the correct directory there
-// is no need to rename target to source, so only archive the source directory.
-func getRenameMap(source *greenplum.Cluster, target InitializeConfig, onlyRenamePrimaries bool) RenameMap {
+func getRenameMap(source *greenplum.Cluster, target InitializeConfig, copyMode bool) RenameMap {
 	m := make(RenameMap)
 
 	for _, seg := range target.Primaries {
 		m[seg.Hostname] = append(m[seg.Hostname], &idl.RenameDirectories{
-			Source:       source.Primaries[seg.ContentID].DataDir,
-			Target:       seg.DataDir,
-			RenameTarget: true,
+			Source: source.Primaries[seg.ContentID].DataDir,
+			Target: seg.DataDir,
 		})
 	}
 
-	// In link mode the mirrors have been deleted to save disk space, so exclude
-	// them from the map.
-	if onlyRenamePrimaries {
-		return m
+	var targetMirrors greenplum.SegConfigs
+	targetMirrors = append(targetMirrors, target.Mirrors...)
+
+	if copyMode {
+		// In link mode the standby was just deleted so there is nothing to rename.
+		// TODO: Consider renaming then deleting to reduce the branches and
+		//  increase code simplicity.
+		targetMirrors = append(targetMirrors, target.Standby)
 	}
 
-	targetMirrors := append(target.Mirrors, target.Standby)
 	for _, seg := range targetMirrors {
 		m[seg.Hostname] = append(m[seg.Hostname], &idl.RenameDirectories{
-			Source:       source.Mirrors[seg.ContentID].DataDir,
-			Target:       seg.DataDir,
-			RenameTarget: false,
+			Source: source.Mirrors[seg.ContentID].DataDir,
+			Target: seg.DataDir,
 		})
 	}
 
