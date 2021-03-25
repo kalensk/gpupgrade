@@ -48,6 +48,10 @@ func (s *Server) UpdateCatalogAndClusterConfig(streams step.OutStreams) (err err
 	segs := map[int]greenplum.SegConfig{-1: master}
 	oldTarget := &greenplum.Cluster{Primaries: segs, GPHome: s.Target.GPHome}
 
+	// TODO: Stopping the master should be in a defer right after starting the
+	//  master. This would make this entire function more idempotent in case
+	//  it fails partway through and on a re-run starting the master will
+	//  succeed since it is not already running.
 	err = oldTarget.StopMasterOnly(streams)
 	if err != nil {
 		return xerrors.Errorf("failed to stop target master: %w", err)
@@ -220,6 +224,23 @@ func (s *Server) UpdateGpSegmentConfiguration(db *sql.DB) (err error) {
 		err := updateConfiguration(tx, s.Source.Primaries[content])
 		if err != nil {
 			return err
+		}
+
+		// Note this if condition would not be needed if we uniformly upgraded
+		// the mirrors like the primaries with pg_upgrade --copy rather than
+		// gpaddmirrors.
+		if s.UseLinkMode {
+			if content == -1 {
+				// there is no standby yet which gets created with
+				// gpactivatestandby so skip. Consider doing the above TODO to
+				// iterate by dbid to remove this conditional.
+				continue
+			}
+
+			err := updateConfiguration(tx, s.Source.Mirrors[content]) // s.Source.Mirrors are undefined at this point.... or do not exist...
+			if err != nil {
+				return err
+			}
 		}
 	}
 
