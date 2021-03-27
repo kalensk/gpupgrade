@@ -472,7 +472,7 @@ func TestDeleteTablespacesOnMirrorsAndStandby(t *testing.T) {
 			{nil, standby, "standby", nil},
 		}
 
-		err := hub.DeleteSourceTablespacesOnMirrorsAndStandby(agentConns, source, tablespaces)
+		err := hub.Delete5XSourceTablespacesOnMirrorsAndStandby(agentConns, source, tablespaces)
 		if err != nil {
 			t.Errorf("DeleteTablespacesOnMirrorsAndStandby returned error %+v", err)
 		}
@@ -509,7 +509,7 @@ func TestDeleteTablespacesOnMirrorsAndStandby(t *testing.T) {
 			{nil, failedClient, "msdw2", nil},
 		}
 
-		err := hub.DeleteSourceTablespacesOnMirrorsAndStandby(agentConns, source, tablespaces)
+		err := hub.Delete5XSourceTablespacesOnMirrorsAndStandby(agentConns, source, tablespaces)
 
 		if !errors.Is(err, expected) {
 			t.Errorf("got error %#v, want %#v", err, expected)

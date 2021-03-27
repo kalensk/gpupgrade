@@ -5,6 +5,7 @@ package hub
 
 import (
 	"context"
+	"path/filepath"
 	"sync"
 
 	"github.com/greenplum-db/gpupgrade/greenplum"
@@ -130,7 +131,7 @@ func DeleteTargetTablespacesOnPrimaries(agentConns []*Connection, target *greenp
 	return ExecuteRPC(agentConns, request)
 }
 
-func DeleteSourceTablespacesOnMirrorsAndStandby(agentConns []*Connection, source *greenplum.Cluster, tablespaces greenplum.Tablespaces) error {
+func Delete5XSourceTablespacesOnMirrorsAndStandby(agentConns []*Connection, source *greenplum.Cluster, tablespaces greenplum.Tablespaces) error {
 	request := func(conn *Connection) error {
 
 		segments := source.SelectSegments(func(seg *greenplum.SegConfig) bool {
@@ -149,7 +150,15 @@ func DeleteSourceTablespacesOnMirrorsAndStandby(agentConns []*Connection, source
 					continue
 				}
 
-				dirs = append(dirs, tsInfo.Location)
+				// FIXME:
+				// For 5X tablespaces we want ts.location + <dbOID> such as 12094.
+				// Deleting ts.location without the dbOID will delete "both" the
+				// containing 5X and 6X tablespaces. We want the 6X tablespaces!
+				//
+				// Alternatively, which is less safe is to delete everything
+				// except ts.location + dbID (with the exception of when
+				// dbID = 1 which is also the master tablespace oid)
+				dirs = append(dirs, filepath.Join(tsInfo.Location, "12094"))
 			}
 		}
 

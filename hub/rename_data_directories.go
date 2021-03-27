@@ -37,8 +37,18 @@ func UpdateDataDirectories(conf *Config, agentConns []*Connection) error {
 			return xerrors.Errorf("removing source cluster standby and mirror segment data directories: %w", err)
 		}
 
-		if err := DeleteSourceTablespacesOnMirrorsAndStandby(agentConns, conf.Source, conf.Tablespaces); err != nil {
-			return xerrors.Errorf("removing source cluster standby and mirror tablespace data directories: %w", err)
+		// FIXME: This is deleting the 6X mirror tablespaces and not just the 5X ones...BAD
+		// Now that link mode can upgrade mirrors in-place, "only" delete target
+		// mirror tablespaces for 5X clusters. This is because the tablespace
+		// layout is different between 5X and 6X and is safe to delete when in link
+		// mode. However, for 6->7 upgrades do not delete the target mirror
+		// tablespaces in link mode as the directory format is the same.
+		if conf.Source.Version.Is("5") {
+			// TODO: Fix Delete5XSourceTablespacesOnMirrorsAndStandby() to
+			//  correctly delete only 5X tablespaces and not 6X or 7X tablespaces.
+			if err := Delete5XSourceTablespacesOnMirrorsAndStandby(agentConns, conf.Source, conf.Tablespaces); err != nil {
+				return xerrors.Errorf("removing source cluster standby and mirror tablespace data directories: %w", err)
+			}
 		}
 	}
 
