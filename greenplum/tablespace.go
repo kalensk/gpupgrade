@@ -53,6 +53,7 @@ type TablespaceInfo struct {
 }
 
 type Tablespace struct {
+	// DbOID int // TODO: Update Delete5XSourceTablespacesOnMirrorsAndStandby() to delete ts.location + <dbOID>
 	DbId int
 	Oid  int
 	Name string
