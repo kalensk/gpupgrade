@@ -78,12 +78,21 @@ func (s *Server) Finalize(_ *idl.FinalizeRequest, stream idl.CliToHub_FinalizeSe
 	})
 
 	st.Run(idl.Substep_UPDATE_TARGET_CONF_FILES, func(streams step.OutStreams) error {
-		return UpdateConfFiles(streams,
+		err := UpdateConfFiles(streams,
 			semver.MustParse(s.Target.Version.SemVer.String()),
 			s.Target.MasterDataDir(),
 			s.TargetInitializeConfig.Master.Port,
 			s.Source.MasterPort(),
 		)
+		if err != nil {
+			return err
+		}
+
+		if s.UseLinkMode && s.Target.HasMirrors() {
+			return UpdateTargetMirrorConfFiles(streams, s.TargetInitializeConfig, *s.Source)
+		}
+
+		return nil
 	})
 
 	st.Run(idl.Substep_START_TARGET_CLUSTER, func(streams step.OutStreams) error {
