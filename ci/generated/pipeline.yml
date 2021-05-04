@@ -69,19 +69,19 @@ resources:
   type: s3
   source:
     access_key_id: ((bucket-access-key-id))
-    bucket: ((gpdb-stable-builds-bucket-name))
+    bucket: ((gpdb5-release-bucket-name))
     region_name: ((aws-region))
     secret_access_key: ((bucket-secret-access-key))
-    regexp: release_candidates/gpdb_rpm_installer_centos6/gpdb5/greenplum-db-(5.*)-rhel6-x86_64.rpm
+    regexp: deliverables/greenplum-db-(5.*)-rhel6-x86_64.rpm
 
 - name: rpm_gpdb5_centos7
   type: s3
   source:
     access_key_id: ((bucket-access-key-id))
-    bucket: ((gpdb-stable-builds-bucket-name))
+    bucket: ((gpdb5-release-bucket-name))
     region_name: ((aws-region))
     secret_access_key: ((bucket-secret-access-key))
-    regexp: release_candidates/gpdb_rpm_installer_centos7/gpdb5/greenplum-db-(5.*)-rhel7-x86_64.rpm
+    regexp: deliverables/greenplum-db-(5.*)-rhel7-x86_64.rpm
 
 
 - name: rpm_oss

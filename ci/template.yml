@@ -49,10 +49,10 @@ resources:
   type: s3
   source:
     access_key_id: ((bucket-access-key-id))
-    bucket: ((gpdb-stable-builds-bucket-name))
+    bucket: ((gpdb5-release-bucket-name))
     region_name: ((aws-region))
     secret_access_key: ((bucket-secret-access-key))
-    regexp: release_candidates/gpdb_rpm_installer_centos{{.CentosVersion}}/gpdb{{ majorVersion .GPVersion }}/greenplum-db-({{escapeVersion .GPVersion}}.*)-rhel{{.CentosVersion}}-x86_64.rpm
+    regexp: deliverables/greenplum-db-({{escapeVersion .GPVersion}}.*)-rhel{{.CentosVersion}}-x86_64.rpm
 {{- else }}
 - name: rpm_gpdb{{.GPVersion}}_centos{{.CentosVersion}}
   type: gcs
