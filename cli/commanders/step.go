@@ -33,14 +33,15 @@ var additionalNextActions = map[idl.Step]string{
 }
 
 type Step struct {
-	stepName    string
-	step        idl.Step
-	stepStore   *StepStore
-	streams     *step.BufferedStreams
-	verbose     bool
-	timer       *stopwatch.Stopwatch
-	lastSubstep idl.Substep
-	err         error
+	stepName     string
+	step         idl.Step
+	stepStore    *StepStore
+	substepStore step.SubstepStore
+	streams      *step.BufferedStreams
+	verbose      bool
+	timer        *stopwatch.Stopwatch
+	lastSubstep  idl.Substep
+	err          error
 }
 
 func NewStep(currentStep idl.Step, streams *step.BufferedStreams, verbose bool, interactive bool, confirmationText string) (*Step, error) {
@@ -55,6 +56,11 @@ func NewStep(currentStep idl.Step, streams *step.BufferedStreams, verbose bool, 
 	err = stepStore.ValidateStep(currentStep)
 	if err != nil {
 		return nil, err
+	}
+
+	substepStore, err := step.NewSubstepFileStore()
+	if err != nil {
+		return &Step{}, err
 	}
 
 	if !interactive {
@@ -82,12 +88,13 @@ func NewStep(currentStep idl.Step, streams *step.BufferedStreams, verbose bool, 
 	fmt.Println()
 
 	return &Step{
-		stepName:  stepName,
-		step:      currentStep,
-		stepStore: stepStore,
-		streams:   streams,
-		verbose:   verbose,
-		timer:     stopwatch.Start(),
+		stepName:     stepName,
+		step:         currentStep,
+		stepStore:    stepStore,
+		substepStore: substepStore,
+		streams:      streams,
+		verbose:      verbose,
+		timer:        stopwatch.Start(),
 	}, nil
 }
 
@@ -142,7 +149,10 @@ func (s *Step) RunCLISubstep(substep idl.Substep, f func(streams step.OutStreams
 		logDuration(substep.String(), s.verbose, substepTimer.Stop())
 	}()
 
-	s.printStatus(substep, idl.Status_RUNNING)
+	err = s.printStatus(substep, idl.Status_RUNNING)
+	if err != nil {
+		return
+	}
 
 	err = f(s.streams)
 	if s.verbose {
@@ -167,11 +177,17 @@ func (s *Step) RunCLISubstep(substep idl.Substep, f func(streams step.OutStreams
 			err = nil
 		}
 
-		s.printStatus(substep, status)
+		pErr := s.printStatus(substep, status)
+		if pErr != nil {
+			err = errorlist.Append(err, xerrors.Errorf("printing status: %w", pErr))
+		}
 		return
 	}
 
-	s.printStatus(substep, idl.Status_COMPLETE)
+	err = s.printStatus(substep, idl.Status_COMPLETE)
+	if err != nil {
+		return
+	}
 }
 
 func (s *Step) DisableStore() {
@@ -209,7 +225,7 @@ func (s *Step) Complete(completedText string) error {
 	return nil
 }
 
-func (s *Step) printStatus(substep idl.Substep, status idl.Status) {
+func (s *Step) printStatus(substep idl.Substep, status idl.Status) error {
 	if substep == s.lastSubstep {
 		// For the same substep reset the cursor to overwrite the current status.
 		fmt.Print("\r")
@@ -224,7 +240,13 @@ func (s *Step) printStatus(substep idl.Substep, status idl.Status) {
 		fmt.Println()
 	}
 
+	err := s.substepStore.Write(s.step, substep, status)
+	if err != nil {
+		return err
+	}
+
 	s.lastSubstep = substep
+	return nil
 }
 
 func logDuration(operation string, verbose bool, timer *stopwatch.Stopwatch) {
