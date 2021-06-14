@@ -28,6 +28,38 @@ resources:
     branch: ((gpupgrade-git-branch))
     fetch_tags: true
 
+- name: postgis215_gppkg_gpdb5_centos7
+  type: s3
+  source:
+    access_key_id: ((madlib-s3-access_key_id))
+    bucket: ((postgis-gppkg-bucket))
+    region_name: us-west-2
+    secret_access_key: ((madlib-s3-secret_access_key))
+    versioned_file: ((postgis-gppkg-versioned_file_centos7))
+
+- name: postgis215_gppkg_gpdb6_centos7
+  type: s3
+  source:
+    access_key_id: ((madlib-s3-access_key_id))
+    bucket: ((postgis-gppkg-bucket))
+    region_name: us-west-2
+    secret_access_key: ((madlib-s3-secret_access_key))
+    versioned_file: postgis-2.1.5+pivotal.3-gp6-rhel7-x86_64.gppkg
+
+#- name: postgis254_gppkg_gpdb6_centos6
+#  type: gcs
+#  source:
+#    json_key: ((concourse-gcs-resources-service-account-key))
+#    bucket: ((gcs-bucket-intermediates))
+#    versioned_file: 6X-release/postgis_gppkg_centos6/postgis-gp6-rhel6-x86_64.gppkg
+
+- name: postgis254_gppkg_gpdb6_centos7
+  type: gcs
+  source:
+    json_key: ((concourse-gcs-resources-service-account-key))
+    bucket: ((gcs-bucket-intermediates))
+    versioned_file: 6X-release/postgis_gppkg_centos7/postgis-gp6-rhel7-x86_64.gppkg
+
 {{range .AllVersions}}
 - name: gpdb{{.}}_src
   type: git
@@ -402,6 +434,15 @@ jobs:
   # will prevent concourse from becoming overloaded.
   plan:
     - in_parallel:
+        - get: postgis_gpdb5
+          resource: postgis215_gppkg_gpdb5_centos7
+          trigger: true
+        - get: postgis_gpdb6
+          resource: postgis215_gppkg_gpdb6_centos7
+          trigger: true
+        - get: postgis_254_gpdb6
+          resource: postgis254_gppkg_gpdb6_centos7
+          trigger: true
         - get: rpm_enterprise
           trigger: true
           passed: [ build ]
@@ -504,6 +545,9 @@ jobs:
             repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
             tag: "latest"
         inputs:
+        - name: postgis_gpdb6
+          path: postgis
+        - name: postgis_254_gpdb6
         - name: terraform
         - name: ccp_src
         - name: cluster_env_files

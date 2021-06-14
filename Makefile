@@ -209,6 +209,7 @@ set-pipeline:
 	#NOTE-- such as https://github.com/greenplum-db/gpupgrade.git"
 	fly -t $(FLY_TARGET) set-pipeline -p $(PIPELINE_NAME) \
 		-c ci/generated/pipeline.yml \
+		-l ~/workspace/gp-madlib-ci-secrets/postgis-ci-secrets_gpdb5X.yml \
 		-l ~/workspace/gp-continuous-integration/secrets/gpupgrade.$(TARGET).yml \
 		-l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
 		-l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml \
