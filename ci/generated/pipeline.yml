@@ -550,8 +550,20 @@ jobs:
           args:
             - greenplum-db-6
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -649,8 +661,20 @@ jobs:
           args:
             - greenplum-db-6
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -752,8 +776,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -856,8 +892,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -960,8 +1008,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -1065,8 +1125,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -1155,8 +1227,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -1361,8 +1445,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -1466,8 +1562,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
@@ -1556,8 +1664,20 @@ jobs:
           args:
             - greenplum-db-5
             - greenplum-db-6
-    - task: load_dump
-      file: gpupgrade_src/ci/tasks/load-dump.yml
+    - task: load_data
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: sqldump
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/load-dump.sh
     - task: upgrade_cluster
       config:
         platform: linux
