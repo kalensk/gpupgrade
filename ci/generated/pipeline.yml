@@ -298,6 +298,7 @@ groups:
       - 5-to-6-retail-demo-centos-7
 
 jobs:
+
 - name: build
   plan:
   - get: gpupgrade_src
@@ -545,6 +546,342 @@ jobs:
     params:
       SOURCE_PACKAGE: greenplum-db-5
       TARGET_PACKAGE: greenplum-db-6
+  on_failure:
+    <<: *slack_alert
+
+- name: 6-to-6-multihost-bats-centos-6
+  serial_groups: [6-to-6-multihost-bats]
+  # Specifying serial groups so that only one platform runs at a time. For
+  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
+  # will prevent concourse from becoming overloaded.
+  plan:
+    - in_parallel:
+        - get: rpm_enterprise
+          trigger: true
+          passed: [ build ]
+        - get: gpupgrade_src
+          passed: [ build ]
+        - get: rpm_gpdb_source
+          resource: rpm_gpdb6_centos6
+          trigger: true
+        - get: ccp_src
+        - get: terraform.d
+          params:
+            unpack: true
+        - get: bats
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          standby_master: true
+          instance_type: n1-standard-2
+          number_of_nodes: 4
+          PLATFORM: centos6
+          # Decrease the reap time from the default of 8 hours now that there are
+          # both centos6 and centos7 jobs in order to not overload concourse.
+          ccp_reap_minutes: 180
+    - task: gen_source_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        PLATFORM: centos6
+        GPDB_RPM: true
+      input_mapping:
+        gpdb_rpm: rpm_gpdb_source
+    - task: gpinitsystem_source_cluster
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: prepare_source_and_target_installations
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
+          args:
+            - greenplum-db-6
+            - greenplum-db-6
+    - task: run_bats
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
+            tag: "latest"
+        inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files
+          - name: gpupgrade_src
+          - name: rpm_enterprise
+          - name: bats
+        run:
+          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
+      params:
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  on_failure:
+    <<: *slack_alert
+
+- name: 6-to-6-multihost-bats-centos-7
+  serial_groups: [6-to-6-multihost-bats]
+  # Specifying serial groups so that only one platform runs at a time. For
+  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
+  # will prevent concourse from becoming overloaded.
+  plan:
+    - in_parallel:
+        - get: rpm_enterprise
+          trigger: true
+          passed: [ build ]
+        - get: gpupgrade_src
+          passed: [ build ]
+        - get: rpm_gpdb_source
+          resource: rpm_gpdb6_centos7
+          trigger: true
+        - get: ccp_src
+        - get: terraform.d
+          params:
+            unpack: true
+        - get: bats
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          standby_master: true
+          instance_type: n1-standard-2
+          number_of_nodes: 4
+          PLATFORM: centos7
+          # Decrease the reap time from the default of 8 hours now that there are
+          # both centos6 and centos7 jobs in order to not overload concourse.
+          ccp_reap_minutes: 180
+    - task: gen_source_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        PLATFORM: centos7
+        GPDB_RPM: true
+      input_mapping:
+        gpdb_rpm: rpm_gpdb_source
+    - task: gpinitsystem_source_cluster
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: prepare_source_and_target_installations
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: cluster_env_files
+        run:
+          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
+          args:
+            - greenplum-db-6
+            - greenplum-db-6
+    - task: run_bats
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
+            tag: "latest"
+        inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files
+          - name: gpupgrade_src
+          - name: rpm_enterprise
+          - name: bats
+        run:
+          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
+      params:
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  on_failure:
+    <<: *slack_alert
+
+- name: 5-to-6-multihost-bats-centos-6
+  serial_groups: [5-to-6-multihost-bats]
+  # Specifying serial groups so that only one platform runs at a time. For
+  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
+  # will prevent concourse from becoming overloaded.
+  plan:
+    - in_parallel:
+        - get: rpm_enterprise
+          trigger: true
+          passed: [ build ]
+        - get: gpupgrade_src
+          passed: [ build ]
+        - get: rpm_gpdb_source
+          resource: rpm_gpdb5_centos6
+          trigger: true
+        - get: rpm_gpdb_target
+          resource: rpm_gpdb6_centos6
+          trigger: true
+        - get: ccp_src
+        - get: terraform.d
+          params:
+            unpack: true
+        - get: bats
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          standby_master: true
+          instance_type: n1-standard-2
+          number_of_nodes: 4
+          PLATFORM: centos6
+          # Decrease the reap time from the default of 8 hours now that there are
+          # both centos6 and centos7 jobs in order to not overload concourse.
+          ccp_reap_minutes: 180
+    - task: gen_source_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        PLATFORM: centos6
+        GPDB_RPM: true
+      input_mapping:
+        gpdb_rpm: rpm_gpdb_source
+    - task: gpinitsystem_source_cluster
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: prepare_source_and_target_installations
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: cluster_env_files
+          - name: rpm_gpdb_target
+        run:
+          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
+          args:
+            - greenplum-db-5
+            - greenplum-db-6
+    - task: run_bats
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
+            tag: "latest"
+        inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files
+          - name: gpupgrade_src
+          - name: rpm_enterprise
+          - name: bats
+        run:
+          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
+      params:
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  on_failure:
+    <<: *slack_alert
+
+- name: 5-to-6-multihost-bats-centos-7
+  serial_groups: [5-to-6-multihost-bats]
+  # Specifying serial groups so that only one platform runs at a time. For
+  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
+  # will prevent concourse from becoming overloaded.
+  plan:
+    - in_parallel:
+        - get: rpm_enterprise
+          trigger: true
+          passed: [ build ]
+        - get: gpupgrade_src
+          passed: [ build ]
+        - get: rpm_gpdb_source
+          resource: rpm_gpdb5_centos7
+          trigger: true
+        - get: rpm_gpdb_target
+          resource: rpm_gpdb6_centos7
+          trigger: true
+        - get: ccp_src
+        - get: terraform.d
+          params:
+            unpack: true
+        - get: bats
+    - put: terraform
+      params:
+        <<: *ccp_default_params
+        vars:
+          standby_master: true
+          instance_type: n1-standard-2
+          number_of_nodes: 4
+          PLATFORM: centos7
+          # Decrease the reap time from the default of 8 hours now that there are
+          # both centos6 and centos7 jobs in order to not overload concourse.
+          ccp_reap_minutes: 180
+    - task: gen_source_cluster
+      file: ccp_src/ci/tasks/gen_cluster.yml
+      params:
+        <<: *ccp_gen_cluster_default_params
+        PLATFORM: centos7
+        GPDB_RPM: true
+      input_mapping:
+        gpdb_rpm: rpm_gpdb_source
+    - task: gpinitsystem_source_cluster
+      file: ccp_src/ci/tasks/gpinitsystem.yml
+    - task: prepare_source_and_target_installations
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: alpine
+            tag: latest
+        inputs:
+          - name: gpupgrade_src
+          - name: cluster_env_files
+          - name: rpm_gpdb_target
+        run:
+          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
+          args:
+            - greenplum-db-5
+            - greenplum-db-6
+    - task: run_bats
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source:
+            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
+            tag: "latest"
+        inputs:
+          - name: terraform
+          - name: ccp_src
+          - name: cluster_env_files
+          - name: gpupgrade_src
+          - name: rpm_enterprise
+          - name: bats
+        run:
+          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
+      params:
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
   on_failure:
     <<: *slack_alert
 
@@ -1869,342 +2206,6 @@ jobs:
           - name: cluster_env_files
         run:
           path: gpupgrade_src/ci/scripts/validate-mirrors-and-standby.bash
-  ensure:
-    <<: *set_failed
-  on_success:
-    <<: *ccp_destroy
-  on_failure:
-    <<: *slack_alert
-
-- name: 6-to-6-multihost-bats-centos-6
-  serial_groups: [6-to-6-multihost-bats]
-  # Specifying serial groups so that only one platform runs at a time. For
-  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
-  # will prevent concourse from becoming overloaded.
-  plan:
-    - in_parallel:
-        - get: rpm_enterprise
-          trigger: true
-          passed: [ build ]
-        - get: gpupgrade_src
-          passed: [ build ]
-        - get: rpm_gpdb_source
-          resource: rpm_gpdb6_centos6
-          trigger: true
-        - get: ccp_src
-        - get: terraform.d
-          params:
-            unpack: true
-        - get: bats
-    - put: terraform
-      params:
-        <<: *ccp_default_params
-        vars:
-          standby_master: true
-          instance_type: n1-standard-2
-          number_of_nodes: 4
-          PLATFORM: centos6
-          # Decrease the reap time from the default of 8 hours now that there are
-          # both centos6 and centos7 jobs in order to not overload concourse.
-          ccp_reap_minutes: 180
-    - task: gen_source_cluster
-      file: ccp_src/ci/tasks/gen_cluster.yml
-      params:
-        <<: *ccp_gen_cluster_default_params
-        PLATFORM: centos6
-        GPDB_RPM: true
-      input_mapping:
-        gpdb_rpm: rpm_gpdb_source
-    - task: gpinitsystem_source_cluster
-      file: ccp_src/ci/tasks/gpinitsystem.yml
-    - task: prepare_source_and_target_installations
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: alpine
-            tag: latest
-        inputs:
-          - name: gpupgrade_src
-          - name: cluster_env_files
-        run:
-          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
-          args:
-            - greenplum-db-6
-            - greenplum-db-6
-    - task: run_bats
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
-            tag: "latest"
-        inputs:
-          - name: terraform
-          - name: ccp_src
-          - name: cluster_env_files
-          - name: gpupgrade_src
-          - name: rpm_enterprise
-          - name: bats
-        run:
-          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
-      params:
-  ensure:
-    <<: *set_failed
-  on_success:
-    <<: *ccp_destroy
-  on_failure:
-    <<: *slack_alert
-
-- name: 6-to-6-multihost-bats-centos-7
-  serial_groups: [6-to-6-multihost-bats]
-  # Specifying serial groups so that only one platform runs at a time. For
-  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
-  # will prevent concourse from becoming overloaded.
-  plan:
-    - in_parallel:
-        - get: rpm_enterprise
-          trigger: true
-          passed: [ build ]
-        - get: gpupgrade_src
-          passed: [ build ]
-        - get: rpm_gpdb_source
-          resource: rpm_gpdb6_centos7
-          trigger: true
-        - get: ccp_src
-        - get: terraform.d
-          params:
-            unpack: true
-        - get: bats
-    - put: terraform
-      params:
-        <<: *ccp_default_params
-        vars:
-          standby_master: true
-          instance_type: n1-standard-2
-          number_of_nodes: 4
-          PLATFORM: centos7
-          # Decrease the reap time from the default of 8 hours now that there are
-          # both centos6 and centos7 jobs in order to not overload concourse.
-          ccp_reap_minutes: 180
-    - task: gen_source_cluster
-      file: ccp_src/ci/tasks/gen_cluster.yml
-      params:
-        <<: *ccp_gen_cluster_default_params
-        PLATFORM: centos7
-        GPDB_RPM: true
-      input_mapping:
-        gpdb_rpm: rpm_gpdb_source
-    - task: gpinitsystem_source_cluster
-      file: ccp_src/ci/tasks/gpinitsystem.yml
-    - task: prepare_source_and_target_installations
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: alpine
-            tag: latest
-        inputs:
-          - name: gpupgrade_src
-          - name: cluster_env_files
-        run:
-          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
-          args:
-            - greenplum-db-6
-            - greenplum-db-6
-    - task: run_bats
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
-            tag: "latest"
-        inputs:
-          - name: terraform
-          - name: ccp_src
-          - name: cluster_env_files
-          - name: gpupgrade_src
-          - name: rpm_enterprise
-          - name: bats
-        run:
-          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
-      params:
-  ensure:
-    <<: *set_failed
-  on_success:
-    <<: *ccp_destroy
-  on_failure:
-    <<: *slack_alert
-
-- name: 5-to-6-multihost-bats-centos-6
-  serial_groups: [5-to-6-multihost-bats]
-  # Specifying serial groups so that only one platform runs at a time. For
-  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
-  # will prevent concourse from becoming overloaded.
-  plan:
-    - in_parallel:
-        - get: rpm_enterprise
-          trigger: true
-          passed: [ build ]
-        - get: gpupgrade_src
-          passed: [ build ]
-        - get: rpm_gpdb_source
-          resource: rpm_gpdb5_centos6
-          trigger: true
-        - get: rpm_gpdb_target
-          resource: rpm_gpdb6_centos6
-          trigger: true
-        - get: ccp_src
-        - get: terraform.d
-          params:
-            unpack: true
-        - get: bats
-    - put: terraform
-      params:
-        <<: *ccp_default_params
-        vars:
-          standby_master: true
-          instance_type: n1-standard-2
-          number_of_nodes: 4
-          PLATFORM: centos6
-          # Decrease the reap time from the default of 8 hours now that there are
-          # both centos6 and centos7 jobs in order to not overload concourse.
-          ccp_reap_minutes: 180
-    - task: gen_source_cluster
-      file: ccp_src/ci/tasks/gen_cluster.yml
-      params:
-        <<: *ccp_gen_cluster_default_params
-        PLATFORM: centos6
-        GPDB_RPM: true
-      input_mapping:
-        gpdb_rpm: rpm_gpdb_source
-    - task: gpinitsystem_source_cluster
-      file: ccp_src/ci/tasks/gpinitsystem.yml
-    - task: prepare_source_and_target_installations
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: alpine
-            tag: latest
-        inputs:
-          - name: gpupgrade_src
-          - name: cluster_env_files
-          - name: rpm_gpdb_target
-        run:
-          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
-          args:
-            - greenplum-db-5
-            - greenplum-db-6
-    - task: run_bats
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
-            tag: "latest"
-        inputs:
-          - name: terraform
-          - name: ccp_src
-          - name: cluster_env_files
-          - name: gpupgrade_src
-          - name: rpm_enterprise
-          - name: bats
-        run:
-          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
-      params:
-  ensure:
-    <<: *set_failed
-  on_success:
-    <<: *ccp_destroy
-  on_failure:
-    <<: *slack_alert
-
-- name: 5-to-6-multihost-bats-centos-7
-  serial_groups: [5-to-6-multihost-bats]
-  # Specifying serial groups so that only one platform runs at a time. For
-  # example, 5-to-6-centos7 will only run after 5-to-6-centos6 completes. This
-  # will prevent concourse from becoming overloaded.
-  plan:
-    - in_parallel:
-        - get: rpm_enterprise
-          trigger: true
-          passed: [ build ]
-        - get: gpupgrade_src
-          passed: [ build ]
-        - get: rpm_gpdb_source
-          resource: rpm_gpdb5_centos7
-          trigger: true
-        - get: rpm_gpdb_target
-          resource: rpm_gpdb6_centos7
-          trigger: true
-        - get: ccp_src
-        - get: terraform.d
-          params:
-            unpack: true
-        - get: bats
-    - put: terraform
-      params:
-        <<: *ccp_default_params
-        vars:
-          standby_master: true
-          instance_type: n1-standard-2
-          number_of_nodes: 4
-          PLATFORM: centos7
-          # Decrease the reap time from the default of 8 hours now that there are
-          # both centos6 and centos7 jobs in order to not overload concourse.
-          ccp_reap_minutes: 180
-    - task: gen_source_cluster
-      file: ccp_src/ci/tasks/gen_cluster.yml
-      params:
-        <<: *ccp_gen_cluster_default_params
-        PLATFORM: centos7
-        GPDB_RPM: true
-      input_mapping:
-        gpdb_rpm: rpm_gpdb_source
-    - task: gpinitsystem_source_cluster
-      file: ccp_src/ci/tasks/gpinitsystem.yml
-    - task: prepare_source_and_target_installations
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: alpine
-            tag: latest
-        inputs:
-          - name: gpupgrade_src
-          - name: cluster_env_files
-          - name: rpm_gpdb_target
-        run:
-          path: gpupgrade_src/ci/scripts/prepare-source-and-target-installations.sh
-          args:
-            - greenplum-db-5
-            - greenplum-db-6
-    - task: run_bats
-      config:
-        platform: linux
-        image_resource:
-          type: registry-image
-          source:
-            repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
-            tag: "latest"
-        inputs:
-          - name: terraform
-          - name: ccp_src
-          - name: cluster_env_files
-          - name: gpupgrade_src
-          - name: rpm_enterprise
-          - name: bats
-        run:
-          path: gpupgrade_src/ci/scripts/bats-on-cluster.bash
-      params:
   ensure:
     <<: *set_failed
   on_success:

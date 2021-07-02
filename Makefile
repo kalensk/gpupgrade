@@ -204,7 +204,9 @@ endif
 # TODO: Keep this in sync with the README at github.com/greenplum-db/continuous-integration
 set-pipeline:
 	# Keep pipeline.yml up to date
+	cat ./ci/1_resources_anchors_groups.yml ./ci/2_build_lint_gpupgrade_jobs.yml ./ci/3_pg_upgrade_jobs.yml ./ci/4_multi_host_gpupgrade_jobs.yml ./ci/5_upgrade_and_functional_jobs.yml ./ci/6_publish_rc.yml > ./ci/generated/template.yml
 	go generate ./ci
+
 	#NOTE-- make sure your gpupgrade-git-remote uses an https style git"
 	#NOTE-- such as https://github.com/greenplum-db/gpupgrade.git"
 	fly -t $(FLY_TARGET) set-pipeline -p $(PIPELINE_NAME) \

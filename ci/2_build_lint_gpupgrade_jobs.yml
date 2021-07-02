@@ -1,0 +1,121 @@
+- name: build
+  plan:
+  - get: gpupgrade_src
+    trigger: true
+  - task: build
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
+          tag: latest
+      inputs:
+        - name: gpupgrade_src
+      outputs:
+        - name: built_oss
+        - name: built_enterprise
+      run:
+        path: gpupgrade_src/ci/scripts/build.bash
+  - in_parallel:
+    - put: rpm_oss
+      params:
+        file: built_oss/gpupgrade-*.rpm
+    - put: rpm_enterprise
+      params:
+        file: built_enterprise/gpupgrade-*.rpm
+  on_failure:
+    <<: *slack_alert
+
+- name: lint
+  plan:
+  - get: gpupgrade_src
+    trigger: true
+  - task: lint
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: golangci/golangci-lint
+      inputs:
+        - name: gpupgrade_src
+      run:
+        path: bash
+        args:
+          - -c
+          - |
+            set -ex
+
+            cd gpupgrade_src
+            make lint
+  on_failure:
+    <<: *slack_alert
+
+- name: noinstall-tests
+  plan:
+  - in_parallel:
+    - get: gpupgrade_src
+      trigger: true
+    - get: bats
+  - task: noinstall-tests
+    config:
+      platform: linux
+      image_resource:
+        # Use docker-image instead of registry-image due to the following error.
+        # See: https://github.com/concourse/registry-image-resource/issues/283
+        #  --- FAIL: TestLocal (0.00s)
+        #    disk_test.go:269: Local.Filesystems() returned error &fs.PathError{Op:"open", Path:"/etc/mtab", Err:0x2}
+        #    disk_test.go:272: Local.Filesystems() returned no entries
+        #  FAIL
+        #  FAIL	github.com/greenplum-db/gpupgrade/utils/disk	0.030s
+        type: docker-image
+        source:
+          repository: golang
+          tag: 1.16
+      inputs:
+        - name: gpupgrade_src
+        - name: bats
+      run:
+        path: gpupgrade_src/ci/scripts/noinstall-tests.bash
+  on_failure:
+    <<: *slack_alert
+
+{{range .GpupgradeJobs}}
+- name: {{.Name}}
+  plan:
+  - in_parallel:
+    - get: gpupgrade_src
+      trigger: true
+    - get: gpdb_src_source
+      resource: gpdb{{.Source}}_src
+    - get: bats
+    - get: rpm_gpdb_source
+      resource: rpm_gpdb{{.Source}}_centos7
+      trigger: true
+    - get: rpm_gpdb_target
+      resource: rpm_gpdb{{.Target}}_centos7
+      trigger: true
+  - task: install-tests
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: gcr.io/data-gpdb-public-images/gpdb6-centos7-test-golang
+          tag: latest
+      inputs:
+        - name: gpupgrade_src
+        - name: gpdb_src_source
+        - name: rpm_gpdb_source
+        - name: rpm_gpdb_target
+        - name: bats
+      run:
+        path: gpupgrade_src/ci/scripts/install-tests.bash
+    params:
+      SOURCE_PACKAGE: greenplum-db-{{.Source}}
+      TARGET_PACKAGE: greenplum-db-{{.Target}}
+  on_failure:
+    <<: *slack_alert
+{{end -}}
+
