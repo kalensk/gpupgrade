@@ -12,10 +12,7 @@ export GPHOME_SOURCE=/usr/local/greenplum-db-source
 export GPHOME_TARGET=/usr/local/greenplum-db-target
 
 # setup gpadmin user
-# setup_gpadmin_user.bash expects gpdb_src, whereas we are using
-# gpdb_src_source since this is a X-to-Y upgrade test.
-mkdir gpdb_src
-time ./gpdb_src_source/concourse/scripts/setup_gpadmin_user.bash "centos"
+time ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash "centos"
 
 # install source packages
 yum install -y rpm_gpdb_source/*.rpm
@@ -39,10 +36,10 @@ sudo ln -s /usr/local/greenplum-db-${version} "$GPHOME_TARGET"
 chown -R gpadmin:gpadmin "$GPHOME_TARGET"
 
 # create source cluster
-chown -R gpadmin:gpadmin gpdb_src_source/gpAux/gpdemo
+chown -R gpadmin:gpadmin gpdb_src/gpAux/gpdemo
 source "$GPHOME_SOURCE"/greenplum_path.sh
 
-pushd gpdb_src_source/gpAux/gpdemo
+pushd gpdb_src/gpAux/gpdemo
     time su gpadmin -c "make create-demo-cluster"
     source gpdemo-env.sh
 popd

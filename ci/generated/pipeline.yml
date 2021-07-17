@@ -407,6 +407,7 @@ jobs:
       inputs:
         - name: gpupgrade_src
         - name: gpdb_src_source
+          path: gpdb_src # setup_gpadmin_user.bash expects gpdb_src, so transpose gpdb_src_source to gpdb_src
         - name: rpm_gpdb_source
         - name: rpm_gpdb_target
         - name: bats
@@ -443,6 +444,7 @@ jobs:
       inputs:
         - name: gpupgrade_src
         - name: gpdb_src_source
+          path: gpdb_src # setup_gpadmin_user.bash expects gpdb_src, so transpose gpdb_src_source to gpdb_src
         - name: rpm_gpdb_source
         - name: rpm_gpdb_target
         - name: bats
