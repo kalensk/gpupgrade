@@ -85,6 +85,26 @@ func HasRun(step idl.Step, substep idl.Substep) (bool, error) {
 	return false, nil
 }
 
+func HasCompleted(step idl.Step, substep idl.Substep) (bool, error) {
+	return hasStatus(step, substep, func(status idl.Status) bool {
+		return status == idl.Status_COMPLETE
+	})
+}
+
+func hasStatus(step idl.Step, substep idl.Substep, check func(status idl.Status) bool) (bool, error) {
+	substepStore, err := NewSubstepFileStore()
+	if err != nil {
+		return false, err
+	}
+
+	status, err := substepStore.Read(step, substep)
+	if err != nil {
+		return false, err
+	}
+
+	return check(status), nil
+}
+
 func (s *Step) Streams() OutStreams {
 	return s.streams
 }

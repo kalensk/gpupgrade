@@ -454,6 +454,121 @@ func TestHasRun(t *testing.T) {
 	})
 }
 
+func TestHasCompleted(t *testing.T) {
+	stateDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.RemoveAll(stateDir); err != nil {
+			t.Errorf("removing temp directory: %v", err)
+		}
+	}()
+
+	resetEnv := testutils.SetEnv(t, "GPUPGRADE_HOME", stateDir)
+	defer resetEnv()
+
+	cases := []struct {
+		description string
+		status      idl.Status
+		expected    bool
+	}{
+		{
+			description: "returns false when substep is running",
+			status:      idl.Status_RUNNING,
+			expected:    false,
+		},
+		{
+			description: "returns true when substep has completed",
+			status:      idl.Status_COMPLETE,
+			expected:    true,
+		},
+		{
+			description: "returns false when substep has errored",
+			status:      idl.Status_FAILED,
+			expected:    false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.description, func(t *testing.T) {
+			store, err := step.NewSubstepFileStore()
+			if err != nil {
+				t.Fatalf("step.NewSubstepStore returned error %+v", err)
+			}
+
+			err = store.Write(idl.Step_INITIALIZE, idl.Substep_START_AGENTS, c.status)
+			if err != nil {
+				t.Errorf("store.Write returned error %+v", err)
+			}
+
+			hasRun, err := step.HasCompleted(idl.Step_INITIALIZE, idl.Substep_START_AGENTS)
+			if err != nil {
+				t.Errorf("HasRun returned error %+v", err)
+			}
+
+			if hasRun != c.expected {
+				t.Errorf("substep status %t want %t", hasRun, c.expected)
+			}
+		})
+	}
+
+	t.Run("returns an error when getting the status file fails", func(t *testing.T) {
+		resetEnv := testutils.SetEnv(t, "GPUPGRADE_HOME", "does/not/exist")
+		defer resetEnv()
+
+		hasRun, err := step.HasCompleted(idl.Step_INITIALIZE, idl.Substep_START_AGENTS)
+		var expected *os.PathError
+		if !errors.As(err, &expected) {
+			t.Errorf("returned error %#v want %#v", err, expected)
+		}
+
+		if hasRun {
+			t.Errorf("expected substep to not have been run")
+		}
+	})
+
+	t.Run("returns an error when reading from the substep store fails", func(t *testing.T) {
+		dir := testutils.GetTempDir(t, "")
+		defer testutils.MustRemoveAll(t, dir)
+
+		resetEnv := testutils.SetEnv(t, "GPUPGRADE_HOME", dir)
+		defer resetEnv()
+
+		path := filepath.Join(dir, step.SubstepsFileName)
+		testutils.MustWriteToFile(t, path, `{"}"`) // write a malformed JSON status file
+
+		hasRun, err := step.HasCompleted(idl.Step_INITIALIZE, idl.Substep_START_AGENTS)
+		if err == nil {
+			t.Errorf("expected error %#v got nil", err)
+		}
+
+		if hasRun {
+			t.Errorf("expected substep to not have been run")
+		}
+	})
+
+	t.Run("returns false with no error when a step has not yet been run", func(t *testing.T) {
+		dir := testutils.GetTempDir(t, "")
+		defer testutils.MustRemoveAll(t, dir)
+
+		resetEnv := testutils.SetEnv(t, "GPUPGRADE_HOME", dir)
+		defer resetEnv()
+
+		path := filepath.Join(dir, step.SubstepsFileName)
+		testutils.MustWriteToFile(t, path, "{}")
+
+		hasRan, err := step.HasCompleted(idl.Step_FINALIZE, idl.Substep_START_AGENTS)
+		if err != nil {
+			t.Errorf("HasRun returned error %+v", err)
+		}
+
+		if hasRan {
+			t.Errorf("expected substep to not have been run")
+		}
+	})
+}
+
 func TestStepFinish(t *testing.T) {
 	t.Run("closes the output streams", func(t *testing.T) {
 		streams := &testutils.DevNullWithClose{}
