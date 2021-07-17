@@ -17,6 +17,7 @@ source_package=$1
 target_package=$2
 
 apk add --no-progress openssh-client
+# Enable ssh to CCP cluster
 cp -R cluster_env_files/.ssh /root/.ssh
 
 for host in `cat cluster_env_files/hostfile_all`; do

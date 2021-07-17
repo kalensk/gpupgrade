@@ -5,7 +5,6 @@
 
 set -ex
 
-# Enable ssh to CCP cluster
 ./ccp_src/scripts/setup_ssh_to_cluster.sh
 
 scp sqldump/dump.sql.xz gpadmin@mdw:/tmp/
@@ -47,11 +46,11 @@ SQL_EOF
 '
 
 echo 'Fixing remaining non-upgradeable objects...'
-# this is the only view that contains a column of type name, so hardcoding for now
 ssh -n mdw "
     source /usr/local/greenplum-db-source/greenplum_path.sh
     export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
 
+    # Hardcode this view since it's the only one containing a column of type name.
     psql regression -c 'DROP VIEW IF EXISTS redundantly_named_part;'
 "
 
