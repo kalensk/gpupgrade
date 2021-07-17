@@ -68,21 +68,9 @@ func Begin(step idl.Step, sender idl.MessageSender) (*Step, error) {
 }
 
 func HasRun(step idl.Step, substep idl.Substep) (bool, error) {
-	substepStore, err := NewSubstepFileStore()
-	if err != nil {
-		return false, err
-	}
-
-	status, err := substepStore.Read(step, substep)
-	if err != nil {
-		return false, err
-	}
-
-	if status != idl.Status_UNKNOWN_STATUS {
-		return true, nil
-	}
-
-	return false, nil
+	return hasStatus(step, substep, func(status idl.Status) bool {
+		return status != idl.Status_UNKNOWN_STATUS
+	})
 }
 
 func HasCompleted(step idl.Step, substep idl.Substep) (bool, error) {
