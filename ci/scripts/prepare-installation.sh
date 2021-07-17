@@ -11,7 +11,7 @@
 #
 # Expected inputs are SOURCE_PACKAGE_NAME TARGET_PACKAGE_NAME
 
-set -eux
+set -eux -o pipefail
 
 source_package=$1
 target_package=$2
@@ -29,7 +29,7 @@ for host in `cat cluster_env_files/hostfile_all`; do
 
     # Install source/target symlinks.
     ssh -n centos@"$host" "
-        set -eux
+        set -eux -o pipefail
 
         version=\$(rpm -q --qf '%{version}' '$source_package')
         sudo ln -s /usr/local/greenplum-db-\${version} /usr/local/greenplum-db-source
